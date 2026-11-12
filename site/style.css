@@ -36,6 +36,14 @@ h1::before {
   content: ""; width: 10px; height: 22px; border-radius: 2px; background: var(--accent);
 }
 .sub { margin: 0; color: var(--muted); max-width: 70ch; font-size: 14px; }
+.top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px 24px; }
+.truss-link {
+  flex: none; display: inline-flex; align-items: baseline; gap: 7px; padding: 7px 12px; margin-top: 2px;
+  border: 1px solid var(--line); border-radius: 6px; color: var(--text); text-decoration: none; font-size: 14px;
+}
+.truss-link span { color: var(--muted); font-size: 13px; }
+.truss-link:hover { border-color: var(--accent); background: var(--raised); }
+.truss-link:hover span { color: var(--accent); }
 
 .controls {
   display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end;
@@ -151,6 +159,7 @@ footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28
   .card dl { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
 }
 @media (max-width: 640px) {
+  .top { flex-direction: column; }
   .about .defs > div { grid-template-columns: 1fr; gap: 2px; }
   .card { grid-template-columns: 1fr; padding: 12px; }
   .card header { margin: 0 0 12px; }
