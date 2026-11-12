@@ -30,7 +30,7 @@ a { color: var(--accent); }
 .wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
 .vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-header { padding: 26px 0 14px; border-bottom: 1px solid var(--line); }
+body > header { padding: 26px 0 14px; border-bottom: 1px solid var(--line); }
 h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; display: flex; align-items: center; gap: 10px; }
 h1::before {
   content: ""; width: 10px; height: 22px; border-radius: 2px; background: var(--accent);
@@ -104,35 +104,29 @@ tr:last-child td { border-bottom: 0; }
 .facts { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 13px; margin: 2px 0 12px; align-items: baseline; }
 .facts a { margin-left: auto; text-decoration: none; font-weight: 600; }
 .facts a:hover { text-decoration: underline; }
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
-.card { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; }
+/* One full-width row per instrument: tier on the left, the figures as stat tiles in fixed columns
+   so every instrument's numbers line up for comparison. */
+.cards { display: grid; gap: 8px; }
+.card {
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px;
+  display: grid; grid-template-columns: 210px 1fr; align-items: center; padding: 14px 4px 14px 16px;
+}
 .card.sel { border-color: var(--accent); }
-.card header { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.card header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; row-gap: 10px; margin-right: 18px; }
 .card header .dim { font-size: 12px; }
 .t.big {
   display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 5px;
   color: var(--chip-text); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums;
 }
-.meter { display: flex; gap: 2px; margin-left: auto; }
-.meter .seg { width: 9px; height: 14px; border-radius: 2px; background: var(--line); }
-.card dl { margin: 0; display: grid; gap: 3px; font-size: 13px; }
-.card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-top: 1px solid var(--line); cursor: help; }
-.card dt { color: var(--muted); white-space: nowrap; }
-.card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.meter { display: flex; gap: 2px; flex-basis: 100%; }
+.meter .seg { flex: 1; max-width: 22px; height: 10px; border-radius: 2px; background: var(--line); }
+.card dl { margin: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-left: 1px solid var(--line); }
+.card dl > div { display: flex; flex-direction: column; gap: 3px; padding: 2px 14px; cursor: help; min-width: 0; }
+.card dt { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.card dd { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.card dd .sep { display: none; }
+.card dd .dim { display: block; font-size: 12px; font-weight: 400; line-height: 1.3; }
 .note { font-size: 12px; margin: 10px 0 0; }
-
-/* One instrument: a full-width card, tier on the left and the figures as a row of stat tiles. */
-.cards.one { grid-template-columns: 1fr; }
-.cards.one .card { display: grid; grid-template-columns: minmax(200px, auto) 1fr; gap: 0; align-items: center; padding: 14px 4px 14px 16px; }
-.cards.one .card header { margin: 0 18px 0 0; flex-wrap: wrap; row-gap: 10px; }
-.cards.one .meter { margin-left: 0; flex-basis: 100%; }
-.cards.one .meter .seg { flex: 1; max-width: 22px; height: 10px; }
-.cards.one dl { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0; border-left: 1px solid var(--line); }
-.cards.one dl > div { flex-direction: column; justify-content: flex-start; gap: 3px; border-top: 0; padding: 2px 14px; }
-.cards.one dt { font-size: 12px; }
-.cards.one dd { text-align: left; font-size: 20px; font-weight: 600; line-height: 1.2; }
-.cards.one dd .sep { display: none; }
-.cards.one dd .dim { display: block; font-size: 12px; font-weight: 400; line-height: 1.3; }
 
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 14px 0; color: var(--muted); font-size: 13px; }
 
@@ -143,11 +137,14 @@ tr:last-child td { border-bottom: 0; }
 
 footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28px; color: var(--muted); font-size: 13px; }
 
+@media (max-width: 980px) and (min-width: 641px) {
+  .card dl { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
+}
 @media (max-width: 640px) {
-  .cards.one .card { grid-template-columns: 1fr; padding: 12px; }
-  .cards.one .card header { margin: 0 0 12px; }
-  .cards.one dl { border-left: 0; border-top: 1px solid var(--line); padding-top: 10px; grid-template-columns: 1fr 1fr; row-gap: 12px; }
-  .cards.one dl > div { padding: 0 10px 0 0; }
+  .card { grid-template-columns: 1fr; padding: 12px; }
+  .card header { margin: 0 0 12px; }
+  .card dl { border-left: 0; border-top: 1px solid var(--line); padding-top: 10px; grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .card dl > div { padding: 0 10px 0 0; }
   .facts a { margin-left: 0; }
   tbody tr.more > td { padding: 4px 8px 12px 11px; }
   th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { display: none; }

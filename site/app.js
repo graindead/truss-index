@@ -149,7 +149,7 @@ function card(r, sel) {
   const stats = [
     ["Fretwork score (D)", (r[1] / 100).toFixed(2), "The raw difficulty score behind both tiers. Scales differ by instrument."],
     ["Open-ended tier", r[7] != null ? `${r[3]} <span class="dim"><span class="sep">· </span>${r[7]} counting 2x kick</span>` : r[3], "Keeps climbing past 6 for very hard charts."],
-    ["Harder than", pct == null ? "–" : `${pct}% <span class="dim">of rated ${kind} charts</span>`, "Where this D sits among every rated chart on this instrument."],
+    ["Harder than", pct == null ? "–" : `${pct}% <span class="dim">of ${kind} charts</span>`, "Where this D sits among every rated chart on this instrument."],
     ["Movement", `${(r[4] / 100).toFixed(2)} <span class="dim">per second</span>`, r[0] === 4 ? "Average newly struck pads per second." : "Average fret changes per second."],
     ["Spread", (r[5] / 100).toFixed(2), "How much the note rate swings over the song: low is even, high has spikes."],
   ];
@@ -177,7 +177,7 @@ function panel(row, inst) {
   return `<div class="panel">
     <div class="facts">${facts.map(([k, v]) => `<span><span class="dim">${k}</span> ${v}</span>`).join("")}
       <a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">Open on Chorus Encore ↗</a></div>
-    <div class="cards${shown.length === 1 ? " one" : ""}">${shown.map((r) => card(r, r === sel)).join("")}</div>
+    <div class="cards">${shown.map((r) => card(r, r === sel)).join("")}</div>
     <p class="dim note">Expert only. Hover a figure for what it means.</p>
   </div>`;
 }
