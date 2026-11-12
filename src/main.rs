@@ -66,7 +66,7 @@ fn parse_args() -> Result<Args, String> {
             "--db" => a.db = val()?.into(),
             "--out" => a.out = val()?.into(),
             "--limit" => a.limit = Some(val()?.parse().map_err(|_| "--limit: not a number")?),
-            "--jobs" => a.jobs = val()?.parse::<usize>().map_err(|_| "--jobs: not a number")?.clamp(1, 16),
+            "--jobs" => a.jobs = val()?.parse::<usize>().map_err(|_| "--jobs: not a number")?.clamp(1, 32),
             "--list-pages" => a.list_pages = Some(val()?.parse().map_err(|_| "--list-pages: not a number")?),
             "--full-list" => a.full_list = true,
             "--no-list" => a.no_list = true,

@@ -43,7 +43,7 @@ Options:
 | Option | Meaning |
 | --- | --- |
 | `--db PATH` | Database file (default `data/fretwork.db`) |
-| `--jobs N` | Charts fetched at once, 1–16 (default 4) |
+| `--jobs N` | Charts fetched at once, 1–32 (default 4; the first full scan ran at 32) |
 | `--limit N` | Rate at most N charts this run, newest first |
 | `--list-pages N` | Stop listing after N catalog pages (for trials) |
 | `--full-list` | List the whole catalog even if a previous listing exists, and mark charts Encore no longer has as removed |
