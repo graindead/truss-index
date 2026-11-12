@@ -1,5 +1,5 @@
 [package]
-name = "fretwork-scan"
+name = "truss-index"
 version = "0.1.0"
 edition = "2024"
 description = "Rates every Chorus Encore chart with Fretwork's difficulty maths and exports a static site"

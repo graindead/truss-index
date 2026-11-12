@@ -1,4 +1,4 @@
-// Truss Index: loads data/charts.json (written by `fretwork-scan export`) and filters it
+// Truss Index: loads data/charts.json (written by `truss-index export`) and filters it
 // in the browser. Row: [md5, name, artist, album, charter, lengthSec, modified, ratings]
 // Rating: [inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null]
 // then genre, year.

@@ -7,11 +7,11 @@ instrument and tier, and jump to the chart on enchor.us.
 
 It has two parts:
 
-- **`fretwork-scan`** (Rust, in `src/`) pages through the Encore catalog. For each chart it
+- **`truss-index`** (Rust, in `src/`) pages through the Encore catalog. For each chart it
   downloads only the notes file out of the `.sng` using HTTP byte ranges, not the audio. It rates
   every Expert track with Fretwork's maths and stores the results in SQLite (`data/fretwork.db`).
 - **`site/`** is a plain HTML/CSS/JS page. It loads `site/data/charts.json`, which
-  `fretwork-scan export` writes, and does all searching in the browser. No build step and no
+  `truss-index export` writes, and does all searching in the browser. No build step and no
   server, so it runs on GitHub Pages.
 
 - **`wasm/`** builds the difficulty graphs. Clicking an instrument in a chart's details fetches
@@ -37,14 +37,14 @@ cargo build --release
 Trial run: list two catalog pages (~500 charts) and rate 300 of them.
 
 ```bash
-./target/release/fretwork-scan scan --list-pages 2 --limit 300
+./target/release/truss-index scan --list-pages 2 --limit 300
 ```
 
 Full scan: list the whole catalog (~96,000 charts, ~390 requests) and rate everything. At the
 default 4 charts at a time this takes roughly 80 minutes.
 
 ```bash
-./target/release/fretwork-scan scan
+./target/release/truss-index scan
 ```
 
 Options:
@@ -59,7 +59,7 @@ Options:
 | `--no-list` | Skip listing; only rate charts already in the database |
 | `--retry-failed` | Try charts again that failed 3 times |
 
-`fretwork-scan stats` prints counts. `fretwork-scan export [--out site/data]` writes the site data.
+`truss-index stats` prints counts. `truss-index export [--out site/data]` writes the site data.
 
 ### Resuming and keeping up to date
 
@@ -100,7 +100,7 @@ Fretwork rates Expert 5-fret guitar, co-op, rhythm, bass, keys and drums. Charts
 ## Viewing the site locally
 
 ```bash
-./target/release/fretwork-scan export
+./target/release/truss-index export
 ```
 
 Build the graph module (needs `rustup target add wasm32-unknown-unknown` once):

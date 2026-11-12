@@ -89,7 +89,7 @@ jobs:
           if [ "${{ inputs.full_list }}" = "true" ] || { [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "05" ]; }; then
             FLAGS="$FLAGS --full-list"
           fi
-          ./target/release/fretwork-scan scan $FLAGS
+          ./target/release/truss-index scan $FLAGS
 
       - name: Upload database
         if: always()
@@ -101,7 +101,7 @@ jobs:
           gh release upload data data/fretwork.db.gz --clobber
 
       - name: Export site data
-        run: ./target/release/fretwork-scan export
+        run: ./target/release/truss-index export
 
       # Give style.css and app.js a new address each commit, so browsers don't keep using
       # their cached copies (Pages lets them cache for 10 minutes) after the site changes.

@@ -1,11 +1,11 @@
-//! fretwork-scan: lists the Chorus Encore catalog, rates each chart's Expert tracks with
-//! Fretwork's maths (by Staycation, MIT), stores the results in SQLite and exports them for the
-//! static site.
+//! truss-index: the Truss Index scanner. Lists the Chorus Encore catalog, rates each chart's
+//! Expert tracks with Fretwork's maths (by Staycation, MIT), stores the results in SQLite and
+//! exports them for the static site.
 //!
-//!   fretwork-scan scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N]
+//!   truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N]
 //!                        [--no-list] [--retry-failed]
-//!   fretwork-scan export [--db PATH] [--out DIR]
-//!   fretwork-scan stats  [--db PATH]
+//!   truss-index export [--db PATH] [--out DIR]
+//!   truss-index stats  [--db PATH]
 
 #[allow(dead_code)] // copied whole from Truss; the scanner only needs the notes
 mod chart;
@@ -25,9 +25,9 @@ use std::time::{Duration, Instant};
 use tokio::sync::Mutex;
 
 const USAGE: &str = "usage:
-  fretwork-scan scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N] [--no-list] [--retry-failed]
-  fretwork-scan export [--db PATH] [--out DIR]
-  fretwork-scan stats  [--db PATH]";
+  truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N] [--no-list] [--retry-failed]
+  truss-index export [--db PATH] [--out DIR]
+  truss-index stats  [--db PATH]";
 
 /// Encore's newest-first order can lag a little behind uploads, so an incremental listing keeps
 /// going this far past the last listing's newest chart.
