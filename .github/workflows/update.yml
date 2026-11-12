@@ -56,11 +56,23 @@ jobs:
           fi
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
 
       - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            wasm -> target
 
       - name: Build scanner
         run: cargo build --release
+
+      # The in-browser difficulty graphs: the scanner's parser and curve maths as WebAssembly.
+      - name: Build graph module
+        run: |
+          cargo build --release --manifest-path wasm/Cargo.toml --target wasm32-unknown-unknown
+          cp wasm/target/wasm32-unknown-unknown/release/truss_index_curves.wasm site/curves.wasm
 
       - name: Download database
         run: |

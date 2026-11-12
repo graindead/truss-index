@@ -5,6 +5,7 @@
 "use strict";
 
 const PER_PAGE = 100;
+const ASSET_V = document.currentScript ? new URL(document.currentScript.src).search : "";
 // Encore's own order: most recently added or updated first (charts.json is written in that order).
 const DEFAULT_SORT = "mod-desc";
 const NAMES = ["Lead guitar", "Co-op guitar", "Rhythm", "Bass", "Drums", "Keys"];
@@ -143,7 +144,9 @@ function meter(remap) {
   return `<span class="meter" aria-hidden="true">${h}</span>`;
 }
 
-function card(r, sel) {
+function card(r, sel, md5) {
+  const key = `${md5}:${r[0]}`;
+  const gOpen = graphOpen.has(key);
   const pct = percentile(r[0], r[1]);
   const kind = r[0] === 4 ? "drum" : NAMES[r[0]].toLowerCase();
   const stats = [
@@ -154,15 +157,19 @@ function card(r, sel) {
     ["Spread", (r[5] / 100).toFixed(2), "How much the note rate swings over the song: low is even, high has spikes."],
   ];
   if (r[6] != null) stats.push(["Kicks", `${(r[6] / 100).toFixed(2)} <span class="dim">per second</span>`, "Average single-pedal kicks per second."]);
-  return `<section class="card${sel ? " sel" : ""}">
+  return `<section class="card${sel ? " sel" : ""}${gOpen ? " gopen" : ""}" data-key="${key}" tabindex="0" role="button" aria-expanded="${gOpen}"
+      aria-label="${NAMES[r[0]]}: ${gOpen ? "hide" : "show"} the difficulty graph">
     <header><span class="t big" style="background:${tierColor(r[2])}">${r[2]}</span>
-      <div><b>${NAMES[r[0]]}</b><div class="dim">Tier ${r[2]} of 6</div></div>${meter(r[2])}</header>
+      <div><b>${NAMES[r[0]]}</b><div class="dim">Tier ${r[2]} of 6</div></div>${meter(r[2])}
+      <span class="gtoggle">${gOpen ? "Hide graph ▴" : "Show graph ▾"}</span></header>
     <dl>${stats.map(([k, v, tip]) => `<div title="${esc(tip)}"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+    ${gOpen ? `<div class="graph" data-key="${key}">${graphBody(md5, r[0])}</div>` : ""}
   </section>`;
 }
 
 function panel(row, inst) {
-  const [md5, , , album, charter, len, mod, rs, genre, year] = row;
+  const [md5, , , album, charter, len, mod, rs, genre, year, hasVideo] = row;
+  videoOf.set(md5, !!hasVideo);
   const sel = inst >= 0 ? rs.find((x) => x[0] === inst) : null;
   const shown = sel ? [sel, ...rs.filter((x) => x !== sel)] : rs;
   const known = (v) => v && !/^unknown /i.test(v); // song.ini's "Unknown Album" etc.
@@ -177,8 +184,8 @@ function panel(row, inst) {
   return `<div class="panel">
     <div class="facts">${facts.map(([k, v]) => `<span><span class="dim">${k}</span> ${v}</span>`).join("")}
       <a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">Open on Chorus Encore ↗</a></div>
-    <div class="cards">${shown.map((r) => card(r, r === sel)).join("")}</div>
-    <p class="dim note">Expert only. Hover a figure for what it means.</p>
+    <div class="cards">${shown.map((r) => card(r, r === sel, md5)).join("")}</div>
+    <p class="dim note">Expert only. Hover a figure for what it means; click an instrument to see its difficulty over the song.</p>
   </div>`;
 }
 
@@ -206,11 +213,186 @@ function render(inst, tIdx) {
   els.page.textContent = `Page ${page + 1} of ${pages}`;
   els.prev.disabled = page === 0;
   els.next.disabled = page >= pages - 1;
+  drawGraphs();
   const [field, dir] = els.sort.value.split("-");
   document.querySelectorAll("th[data-sort]").forEach((th) => {
     th.classList.toggle("on", th.dataset.sort === field);
     th.classList.toggle("asc", dir === "asc");
   });
+}
+
+// ---------- difficulty graphs ----------
+// Fretwork's curves over the song, computed in the browser: the .sng header and notes come from
+// Encore by byte range (as the scanner reads them), and curves.wasm (built from the scanner's
+// own Rust parser and src/curves.rs) turns them into per-second series.
+const graphOpen = new Set();   // `${md5}:${inst}` with the graph showing
+const curveData = new Map();   // md5 -> { step, tracks } | { error }
+const curveLoading = new Set();
+const videoOf = new Map();     // md5 -> has a video background (notes come from the _novideo file)
+const INST_KEYS = ["guitar", "guitarcoop", "rhythm", "bass", "drums", "keys"];
+const SERIES = {
+  d: { label: "D", color: "var(--accent)", width: 2.4, tip: "Moment-to-moment difficulty: the other lines added together" },
+  d2x: { label: "D with 2x kick", color: "var(--t6)", width: 1.8, dash: "5 4", tip: "D counting double-kick notes" },
+  notes: { label: "Notes", color: "var(--success)", width: 1.4, tip: "Notes or chords per second" },
+  movement: { label: "Movement", color: "var(--warning)", width: 1.4, tip: "Fret changes per second" },
+  hands: { label: "Hands", color: "var(--success)", width: 1.4, tip: "Hand hits per second (rolls capped at 4)" },
+  travel: { label: "Travel", color: "var(--warning)", width: 1.4, tip: "Newly struck pads per second" },
+  kicks: { label: "Kicks", color: "var(--danger)", width: 1.4, tip: "Single-pedal kicks per second" },
+};
+
+let wasmP = null;
+function wasm() {
+  wasmP ||= fetch(`curves.wasm${ASSET_V}`)
+    .then((r) => { if (!r.ok) throw new Error(`curves.wasm: HTTP ${r.status}`); return r.arrayBuffer(); })
+    .then((b) => WebAssembly.instantiate(b))
+    .then((m) => m.instance.exports);
+  wasmP.catch(() => { wasmP = null; });
+  return wasmP;
+}
+
+// Copies the byte arrays into wasm memory, calls fn, and parses its JSON result.
+function wcall(ex, fn, ...bufs) {
+  const args = [];
+  const ptrs = bufs.map((b) => {
+    const p = ex.alloc(b.length);
+    new Uint8Array(ex.memory.buffer, p, b.length).set(b);
+    args.push(p, b.length);
+    return [p, b.length];
+  });
+  try {
+    const n = ex[fn](...args);
+    const text = new TextDecoder().decode(new Uint8Array(ex.memory.buffer, ex.out_ptr(), n));
+    return JSON.parse(text);
+  } finally {
+    for (const [p, l] of ptrs) ex.free(p, l);
+  }
+}
+
+async function getRange(url, start, end) {
+  const r = await fetch(url, { headers: { Range: `bytes=${start}-${end - 1}` } });
+  if (!r.ok) throw new Error(`Encore answered HTTP ${r.status}`);
+  const b = new Uint8Array(await r.arrayBuffer());
+  return r.status === 200 ? b.subarray(start, Math.min(end, b.length)) : b;
+}
+
+async function loadCurves(md5) {
+  const ex = await wasm();
+  const url = `https://files.enchor.us/${md5}${videoOf.get(md5) ? "_novideo" : ""}.sng`;
+  let want = 64 * 1024, head, h;
+  for (;;) {
+    head = await getRange(url, 0, want);
+    h = wcall(ex, "header", head);
+    if (h.error) throw new Error(h.error);
+    if (!h.need) break;
+    if (head.length < want || want >= 16 << 20) throw new Error("Incomplete .sng file");
+    want *= 4;
+  }
+  const end = h.index + h.len;
+  const notes = end <= head.length ? head.subarray(h.index, end) : await getRange(url, h.index, end);
+  const res = wcall(ex, "curves", head, notes);
+  if (res.error) throw new Error(res.error);
+  return res;
+}
+
+function graphBody(md5, inst) {
+  const d = curveData.get(md5);
+  if (!d) {
+    if (!curveLoading.has(md5)) {
+      curveLoading.add(md5);
+      loadCurves(md5)
+        .then((res) => curveData.set(md5, res))
+        .catch((e) => curveData.set(md5, { error: e.message || String(e) }))
+        .finally(() => { curveLoading.delete(md5); render(last.inst, last.tIdx); });
+    }
+    return `<p class="gmsg dim">Loading the notes from Chorus Encore…</p>`;
+  }
+  if (d.error) return `<p class="gmsg">Couldn't draw this graph: ${esc(d.error)}</p>`;
+  if (!d.tracks[INST_KEYS[inst]]) return `<p class="gmsg dim">No Expert ${NAMES[inst].toLowerCase()} notes found in this chart.</p>`;
+  return `<div class="greadout"></div><div class="gplot"></div>`;
+}
+
+// The first step giving at most `want` ticks over `span`.
+function niceStep(span, want, steps) {
+  for (const s of steps) if (span / s <= want) return s;
+  return steps[steps.length - 1];
+}
+
+function drawGraphs() {
+  for (const g of els.rows.querySelectorAll(".graph")) {
+    const plot = g.querySelector(".gplot");
+    if (!plot) continue;
+    const [md5, inst] = g.dataset.key.split(":");
+    drawGraph(g, plot, curveData.get(md5), INST_KEYS[+inst]);
+  }
+}
+
+function drawGraph(g, plot, data, instKey) {
+  const tr = data.tracks[instKey];
+  const names = Object.keys(SERIES).filter((k) => tr[k]);
+  const n = Math.max(...names.map((k) => tr[k].length));
+  const stepS = data.step / 1000;
+  plot.innerHTML = ""; // measure the space without the old drawing holding it open
+  const W = Math.max(240, plot.clientWidth), H = W < 500 ? 190 : 230;
+  const m = { l: 34, r: 10, t: 10, b: 24 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  let top = 1;
+  for (const k of names) for (const v of tr[k]) if (v > top) top = v;
+  const ymax = top * 1.08;
+  const yStep = niceStep(ymax, 5, [1, 2, 5, 10, 20, 25, 50, 100, 200]);
+  const dur = Math.max(1, (n - 1) * stepS);
+  const xStep = niceStep(dur, W < 500 ? 4 : 8, [10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600]);
+  const x = (i) => m.l + ((i * stepS) / dur) * iw;
+  const y = (v) => m.t + ih - (v / ymax) * ih;
+  const every = Math.max(1, Math.floor(n / (iw * 1.5)));
+
+  let svg = `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(names.map((k) => SERIES[k].label).join(", "))} over the song">`;
+  for (let v = 0; v <= ymax; v += yStep) {
+    svg += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" class="grid"/><text x="${m.l - 6}" y="${y(v) + 4}" class="ax" text-anchor="end">${v}</text>`;
+  }
+  for (let t = 0; t <= dur; t += xStep) {
+    svg += `<text x="${m.l + (t / dur) * iw}" y="${H - 6}" class="ax" text-anchor="middle">${fmtLen(t) || "0:00"}</text>`;
+  }
+  // The D lines are drawn last so they sit on top.
+  for (const k of [...names].reverse()) {
+    const s = SERIES[k], v = tr[k];
+    let d = "";
+    for (let i = 0; i < v.length; i += every) d += `${d ? "L" : "M"}${x(i).toFixed(1)},${y(v[i]).toFixed(1)}`;
+    svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width}" stroke-linejoin="round"${s.dash ? ` stroke-dasharray="${s.dash}"` : ""}/>`;
+  }
+  svg += `<line class="cursor" y1="${m.t}" y2="${m.t + ih}" x1="0" x2="0" visibility="hidden"/>`;
+  svg += `<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" class="hit"/></svg>`;
+  plot.innerHTML = svg;
+
+  const read = g.querySelector(".greadout");
+  let peak = 0;
+  tr.d.forEach((v, i) => { if (v > tr.d[peak]) peak = i; });
+  const legend = names.map((k) => `<span title="${esc(SERIES[k].tip)}"><i style="background:${SERIES[k].color}"></i>${SERIES[k].label}</span>`).join("");
+  const idle = `${legend}<span class="dim">Peak D ${tr.d[peak].toFixed(1)} at ${fmtLen(Math.round(peak * stepS)) || "0:00"}</span>`;
+  read.innerHTML = idle;
+  const cursor = plot.querySelector(".cursor");
+  const hit = plot.querySelector(".hit");
+  hit.addEventListener("pointermove", (e) => {
+    const box = hit.getBoundingClientRect();
+    const i = Math.max(0, Math.min(n - 1, Math.round((((e.clientX - box.left) / box.width) * dur) / stepS)));
+    cursor.setAttribute("x1", x(i));
+    cursor.setAttribute("x2", x(i));
+    cursor.setAttribute("visibility", "visible");
+    read.innerHTML = `<b>${fmtLen(Math.round(i * stepS)) || "0:00"}</b>` + names.map((k) =>
+      `<span><i style="background:${SERIES[k].color}"></i>${SERIES[k].label} ${(tr[k][i] ?? 0).toFixed(1)}${k.startsWith("d") ? "" : "/s"}</span>`).join("");
+  });
+  hit.addEventListener("pointerleave", () => {
+    cursor.setAttribute("visibility", "hidden");
+    read.innerHTML = idle;
+  });
+}
+
+let resizeTimer;
+addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(drawGraphs, 150); });
+
+function toggleGraph(key) {
+  if (graphOpen.has(key)) graphOpen.delete(key); else graphOpen.add(key);
+  render(last.inst, last.tIdx);
+  els.rows.querySelector(`.card[data-key="${key}"]`)?.focus({ preventScroll: true });
 }
 
 // ---------- events ----------
@@ -223,11 +405,18 @@ function toggleRow(tr) {
 }
 els.rows.addEventListener("click", (e) => {
   if (e.target.closest("a") || getSelection().toString()) return;
+  const cardEl = e.target.closest(".card[data-key]");
+  if (cardEl) {
+    if (!e.target.closest(".graph")) toggleGraph(cardEl.dataset.key);
+    return;
+  }
   const tr = e.target.closest("tr.row");
   if (tr) toggleRow(tr);
 });
 els.rows.addEventListener("keydown", (e) => {
-  if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.row")) { e.preventDefault(); toggleRow(e.target); }
+  if (e.key !== "Enter" && e.key !== " ") return;
+  if (e.target.matches("tr.row")) { e.preventDefault(); toggleRow(e.target); }
+  else if (e.target.matches(".card[data-key]")) { e.preventDefault(); toggleGraph(e.target.dataset.key); }
 });
 
 let timer;

@@ -14,6 +14,14 @@ It has two parts:
   `fretwork-scan export` writes, and does all searching in the browser. No build step and no
   server, so it runs on GitHub Pages.
 
+- **`wasm/`** builds the difficulty graphs. Clicking an instrument in a chart's details fetches
+  that chart's header and notes from Encore in the browser, by byte range like the scanner (about
+  100 KB). `curves.wasm` then computes Fretwork's curves over the song: notes and movement per
+  second for 5-fret, or hands, travel and kicks for drums, smoothed over 2 s, with D as their sum
+  (Fretwork's `functions/curves.py`). It is built from the scanner's own `chart.rs`, `ini.rs`,
+  `sngpkg.rs` and `curves.rs`, so the graphs come from the same code as the ratings. No curve data
+  is stored or published.
+
 The chart parser (`src/chart.rs`), the `.sng` reader (`src/sng.rs`), the ini handling
 (`src/ini.rs`) and the Fretwork port (`src/fretwork.rs`) are copied from
 [Truss](https://github.com/graindead/truss).
@@ -93,6 +101,16 @@ Fretwork rates Expert 5-fret guitar, co-op, rhythm, bass, keys and drums. Charts
 
 ```bash
 ./target/release/fretwork-scan export
+```
+
+Build the graph module (needs `rustup target add wasm32-unknown-unknown` once):
+
+```bash
+cargo build --release --manifest-path wasm/Cargo.toml --target wasm32-unknown-unknown
+```
+
+```bash
+cp wasm/target/wasm32-unknown-unknown/release/truss_index_curves.wasm site/curves.wasm
 ```
 
 ```bash

@@ -1,0 +1,25 @@
+[package]
+name = "truss-index-curves"
+version = "0.1.0"
+edition = "2024"
+description = "Fretwork difficulty-over-time curves for one chart, compiled to WebAssembly for the Truss Index site"
+license = "GPL-3.0"
+publish = false
+
+# Build: cargo build --release --target wasm32-unknown-unknown
+# Output: target/wasm32-unknown-unknown/release/truss_index_curves.wasm -> site/curves.wasm
+
+[lib]
+crate-type = ["cdylib"]
+path = "src/lib.rs"
+
+[dependencies]
+midly = { version = "0.5", default-features = false, features = ["alloc", "std"] }
+serde = { version = "1", features = ["derive"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

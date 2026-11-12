@@ -15,6 +15,7 @@ mod export;
 mod fretwork;
 mod ini;
 mod sng;
+mod sngpkg;
 
 use db::Db;
 use futures::StreamExt;

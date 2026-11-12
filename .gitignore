@@ -1,3 +1,5 @@
 /target
+/wasm/target/
 /data/
 /site/data/
+/site/curves.wasm
