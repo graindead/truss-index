@@ -49,28 +49,41 @@ pub async fn fetch_remote_notes(
     url: &str,
 ) -> Result<(Vec<(String, String)>, Vec<(String, Vec<u8>)>), FetchError> {
     let mut want = 64 * 1024;
-    let (files, mask, metadata) = loop {
+    let (head, files, mask, metadata) = loop {
         let head = get_range(client, url, 0, want).await?;
         if let Some((files, mask, _, metadata)) = try_parse_header(&head).map_err(FetchError::fatal)? {
-            break (files, mask, metadata);
+            break (head, files, mask, metadata);
         }
         if (head.len() as u64) < want || want >= 16 << 20 {
             return Err(FetchError::fatal("Incomplete .sng file"));
         }
         want *= 4;
     };
+    // Only the chart file that will be rated: notes.* first, then .mid before .chart (as scan-chart picks).
+    let pick = files
+        .iter()
+        .filter(|f| {
+            let n = f.name.to_ascii_lowercase();
+            n.ends_with(".chart") || n.ends_with(".mid")
+        })
+        .min_by_key(|f| {
+            let n = f.name.to_ascii_lowercase();
+            (!(n == "notes.chart" || n == "notes.mid"), !n.ends_with(".mid"))
+        });
     let mut out = Vec::new();
-    for f in files {
-        let lower = f.name.to_ascii_lowercase();
-        if !(lower.ends_with(".chart") || lower.ends_with(".mid")) {
-            continue;
-        }
-        let mut bytes = get_range(client, url, f.index, f.index + f.len).await?;
+    if let Some(f) = pick {
+        let end = f.index + f.len;
+        // Often the notes sit right after the header, inside the bytes already fetched.
+        let mut bytes = if end <= head.len() as u64 {
+            head[f.index as usize..end as usize].to_vec()
+        } else {
+            get_range(client, url, f.index, end).await?
+        };
         if bytes.len() as u64 != f.len {
             return Err(FetchError { msg: "Truncated .sng file".into(), retry: true });
         }
         unmask(&mut bytes, &mask, 0);
-        out.push((f.name, bytes));
+        out.push((f.name.clone(), bytes));
     }
     Ok((metadata, out))
 }
