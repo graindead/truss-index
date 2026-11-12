@@ -1,0 +1,90 @@
+:root {
+  --bg: #f6f5f2;
+  --panel: #ffffff;
+  --text: #1d1c1a;
+  --muted: #6b6862;
+  --line: #e2dfd8;
+  --accent: #b5481d;
+  --t0: #8a8780; --t1: #3f8f5a; --t2: #6f9a2e; --t3: #b49112; --t4: #d0731c; --t5: #c8422e; --t6: #8f2f8c;
+  --chip-text: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #161514; --panel: #1f1e1c; --text: #ecebe7; --muted: #a29f97; --line: #34322e; --accent: #f08a5d;
+    --t0: #6d6a64; --t1: #3c8a55; --t2: #6c932b; --t3: #a8870f; --t4: #c26a19; --t5: #c2402c; --t6: #9b3f98;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #161514; --panel: #1f1e1c; --text: #ecebe7; --muted: #a29f97; --line: #34322e; --accent: #f08a5d;
+  --t0: #6d6a64; --t1: #3c8a55; --t2: #6c932b; --t3: #a8870f; --t4: #c26a19; --t5: #c2402c; --t6: #9b3f98;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+a { color: var(--accent); }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 0 16px; }
+.vh { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+header { padding: 28px 0 12px; }
+h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.01em; }
+.sub { margin: 0; color: var(--muted); max-width: 70ch; }
+
+.controls {
+  display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: end;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px;
+  margin: 12px 0;
+}
+.controls label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.controls .search { flex: 1 1 260px; }
+input, select, button {
+  font: inherit; color: var(--text); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px;
+}
+input[type=number] { width: 80px; }
+button { cursor: pointer; }
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: .45; cursor: default; }
+
+.count { color: var(--muted); margin: 6px 2px; }
+
+.table-wrap { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; color: var(--muted); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+th.on::after { content: " ▾"; }
+th.on.asc::after { content: " ▴"; }
+tr:last-child td { border-bottom: 0; }
+.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.song a { font-weight: 600; text-decoration: none; color: var(--text); }
+.song a:hover { color: var(--accent); text-decoration: underline; }
+.song .by { color: var(--muted); font-size: 13px; }
+.charter { color: var(--muted); font-size: 13px; max-width: 18ch; overflow-wrap: anywhere; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; border-radius: 5px; padding: 2px 7px 2px 3px;
+  background: var(--bg); border: 1px solid var(--line); font-size: 12px; white-space: nowrap;
+}
+.chip .t {
+  display: inline-block; min-width: 20px; text-align: center; border-radius: 3px; padding: 0 4px;
+  color: var(--chip-text); font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.chip.sel { border-color: var(--accent); }
+.detail { color: var(--muted); font-size: 12px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+
+.pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 14px 0; color: var(--muted); }
+
+.about { margin: 18px 0; color: var(--muted); }
+.about summary { cursor: pointer; color: var(--text); }
+.about p { max-width: 75ch; }
+
+footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28px; color: var(--muted); font-size: 13px; }
+
+@media (max-width: 640px) {
+  th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { display: none; }
+  .controls label:not(.search) { flex: 1 1 40%; }
+  input[type=number] { width: 100%; }
+}

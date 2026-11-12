@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fretwork Ratings</title>
+<meta name="description" content="Fretwork difficulty ratings for every chart on Chorus Encore.">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Fretwork Ratings</h1>
+    <p class="sub">Difficulty ratings for Chorus Encore charts, computed from each chart's Expert notes with
+      <a href="https://github.com/Staycation44/fretwork">Fretwork</a>'s maths. <span id="meta"></span></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="controls" aria-label="Search and filters">
+    <label class="search">
+      <span class="vh">Search</span>
+      <input id="q" type="search" placeholder="Search song, artist, album or charter" autocomplete="off">
+    </label>
+    <label>Instrument
+      <select id="inst">
+        <option value="">Any</option>
+        <option value="0">Lead guitar</option>
+        <option value="3">Bass</option>
+        <option value="4">Drums</option>
+        <option value="5">Keys</option>
+        <option value="2">Rhythm</option>
+        <option value="1">Co-op guitar</option>
+      </select>
+    </label>
+    <label>Scale
+      <select id="scale">
+        <option value="remap">Tier 0–6</option>
+        <option value="tier">Open-ended tier</option>
+      </select>
+    </label>
+    <label>Min tier <input id="tmin" type="number" min="0" step="1" inputmode="numeric" placeholder="0"></label>
+    <label>Max tier <input id="tmax" type="number" min="0" step="1" inputmode="numeric" placeholder="any"></label>
+    <label>Sort
+      <select id="sort">
+        <option value="d-desc">Hardest first</option>
+        <option value="d-asc">Easiest first</option>
+        <option value="mod-desc">Newest first</option>
+        <option value="name-asc">Song A–Z</option>
+        <option value="artist-asc">Artist A–Z</option>
+        <option value="charter-asc">Charter A–Z</option>
+        <option value="len-desc">Longest first</option>
+        <option value="len-asc">Shortest first</option>
+      </select>
+    </label>
+    <button id="reset" type="button">Reset</button>
+  </section>
+
+  <p id="count" class="count" aria-live="polite">Loading charts…</p>
+
+  <div class="table-wrap">
+    <table id="tbl">
+      <thead>
+        <tr>
+          <th data-sort="name">Song</th>
+          <th data-sort="charter">Charter</th>
+          <th data-sort="len" class="num">Length</th>
+          <th data-sort="d">Fretwork (Expert)</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <nav class="pager" aria-label="Pages">
+    <button id="prev" type="button">‹ Prev</button>
+    <span id="page"></span>
+    <button id="next" type="button">Next ›</button>
+  </nav>
+
+  <details class="about">
+    <summary>What the numbers mean</summary>
+    <p><b>Tier 0–6</b> is Fretwork's difficulty score mapped onto the same spread as official in-game tiers, per instrument.
+      <b>Open-ended tier</b> keeps going past 6 for very hard charts. <b>D</b> is the raw score behind both.</p>
+    <p><b>Movement</b> is average hand movement per second (fret changes, or newly struck pads on drums).
+      <b>Spread</b> is how much the note rate swings over the song: low for an even chart, high for one with spikes.
+      Drums also show <b>kicks</b> (single-pedal kicks per second) and, when the chart has double kick, the open-ended tier counting it (<b>2x</b>).</p>
+    <p>Only Expert is rated. Fretwork rates 5-fret guitar, bass, rhythm, co-op, keys and drums; 6-fret and vocals aren't rated.</p>
+  </details>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Ratings use <a href="https://github.com/Staycation44/fretwork">Fretwork</a> by Staycation (MIT licence, formulas v3), ported to Rust.
+      Chart listings and files come from <a href="https://www.enchor.us">Chorus Encore</a>; each song links to its page there.
+      Not affiliated with either. Charts belong to their charters.</p>
+  </div>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>

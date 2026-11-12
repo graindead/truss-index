@@ -1,0 +1,88 @@
+# Rates new Encore charts every day and redeploys the site to GitHub Pages.
+#
+# The SQLite database lives as an asset on a release tagged "data" (too big and too churny to
+# commit). Each run downloads it, scans incrementally, exports the site data, uploads the
+# database again and deploys. Sundays also do a full catalog listing to notice removed charts.
+#
+# Setup: Settings → Pages → Source: "GitHub Actions". Seed the database first (see README).
+
+name: Update ratings
+
+on:
+  schedule:
+    - cron: "17 5 * * *"   # daily, 05:17 UTC
+  workflow_dispatch:
+    inputs:
+      full_list:
+        description: "List the whole catalog (finds removed charts)"
+        type: boolean
+        default: false
+      limit:
+        description: "Most charts to rate this run"
+        default: "20000"
+
+permissions:
+  contents: write   # upload the database to the "data" release
+  pages: write
+  id-token: write
+
+concurrency:
+  group: update-ratings
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build scanner
+        run: cargo build --release
+
+      - name: Download database
+        run: |
+          mkdir -p data
+          if gh release download data --pattern fretwork.db.gz --dir data; then
+            gunzip -f data/fretwork.db.gz
+          else
+            echo "No database yet; this run starts from scratch."
+          fi
+
+      - name: Scan
+        run: |
+          FLAGS="--limit ${{ inputs.limit || '20000' }}"
+          if [ "${{ inputs.full_list }}" = "true" ] || [ "$(date -u +%u)" = "7" ]; then
+            FLAGS="$FLAGS --full-list"
+          fi
+          ./target/release/fretwork-scan scan $FLAGS
+
+      - name: Upload database
+        if: always()
+        run: |
+          [ -f data/fretwork.db ] || exit 0
+          sqlite3 data/fretwork.db "PRAGMA wal_checkpoint(TRUNCATE);" || true
+          gzip -kf data/fretwork.db
+          gh release view data >/dev/null 2>&1 || gh release create data --title "Scanner database" --notes "SQLite database used by the daily update. Not a software release."
+          gh release upload data data/fretwork.db.gz --clobber
+
+      - name: Export site data
+        run: ./target/release/fretwork-scan export
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4
