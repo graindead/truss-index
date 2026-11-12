@@ -132,7 +132,7 @@ To set it up:
    Or start the workflow by hand a few times. Each run rates up to 20,000 charts within GitHub's
    6-hour job limit.
 
-At ~96k charts, `charts.json` is around 28 MB, or roughly 6–8 MB as Pages serves it gzipped. That
+With the full catalog (95,358 rated charts), `charts.json` is about 16 MB, or about 6 MB as Pages serves it gzipped. That
 is well inside Pages' limits (100 MB per file, 1 GB per site).
 
 ## Credits

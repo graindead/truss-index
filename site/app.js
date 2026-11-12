@@ -173,10 +173,11 @@ window.addEventListener("hashchange", () => { readState(); if (charts.length) ap
 (async () => {
   readState();
   try {
-    const [data, meta] = await Promise.all([
-      fetch("data/charts.json").then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); }),
-      fetch("data/meta.json").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]);
+    // meta.json is tiny and always fetched fresh; its export time versions the big file, so a
+    // new export is never hidden behind a cached charts.json.
+    const meta = await fetch("data/meta.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const v = meta ? `?v=${encodeURIComponent(meta.exported)}` : "";
+    const data = await fetch(`data/charts.json${v}`).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
     charts = data.rows.map((row) => ({ row, text: fold(`${row[1]} ${row[2]} ${row[3]} ${row[4]}`) }));
     if (meta) els.meta.textContent = `${meta.charts.toLocaleString()} charts rated, updated ${meta.exported.slice(0, 10)}.`;
     apply(false);
