@@ -117,9 +117,22 @@ tr:last-child td { border-bottom: 0; }
 .meter .seg { width: 9px; height: 14px; border-radius: 2px; background: var(--line); }
 .card dl { margin: 0; display: grid; gap: 3px; font-size: 13px; }
 .card dl > div { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; border-top: 1px solid var(--line); cursor: help; }
-.card dt { color: var(--muted); }
+.card dt { color: var(--muted); white-space: nowrap; }
 .card dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
 .note { font-size: 12px; margin: 10px 0 0; }
+
+/* One instrument: a full-width card, tier on the left and the figures as a row of stat tiles. */
+.cards.one { grid-template-columns: 1fr; }
+.cards.one .card { display: grid; grid-template-columns: minmax(200px, auto) 1fr; gap: 0; align-items: center; padding: 14px 4px 14px 16px; }
+.cards.one .card header { margin: 0 18px 0 0; flex-wrap: wrap; row-gap: 10px; }
+.cards.one .meter { margin-left: 0; flex-basis: 100%; }
+.cards.one .meter .seg { flex: 1; max-width: 22px; height: 10px; }
+.cards.one dl { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 0; border-left: 1px solid var(--line); }
+.cards.one dl > div { flex-direction: column; justify-content: flex-start; gap: 3px; border-top: 0; padding: 2px 14px; }
+.cards.one dt { font-size: 12px; }
+.cards.one dd { text-align: left; font-size: 20px; font-weight: 600; line-height: 1.2; }
+.cards.one dd .sep { display: none; }
+.cards.one dd .dim { display: block; font-size: 12px; font-weight: 400; line-height: 1.3; }
 
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 14px 0; color: var(--muted); font-size: 13px; }
 
@@ -131,6 +144,10 @@ tr:last-child td { border-bottom: 0; }
 footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28px; color: var(--muted); font-size: 13px; }
 
 @media (max-width: 640px) {
+  .cards.one .card { grid-template-columns: 1fr; padding: 12px; }
+  .cards.one .card header { margin: 0 0 12px; }
+  .cards.one dl { border-left: 0; border-top: 1px solid var(--line); padding-top: 10px; grid-template-columns: 1fr 1fr; row-gap: 12px; }
+  .cards.one dl > div { padding: 0 10px 0 0; }
   .facts a { margin-left: 0; }
   tbody tr.more > td { padding: 4px 8px 12px 11px; }
   th:nth-child(2), td:nth-child(2), th:nth-child(3), td:nth-child(3) { display: none; }
