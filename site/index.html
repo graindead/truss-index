@@ -17,6 +17,45 @@
 </header>
 
 <main class="wrap">
+  <details class="about">
+    <summary>What the numbers mean</summary>
+    <p class="lead">Fretwork works out how hard a chart is from its notes, not from the difficulty the charter typed in.
+      Only Expert is rated: 5-fret guitar, bass, rhythm, co-op, keys and drums (not 6-fret or vocals).</p>
+
+    <h3>What it measures</h3>
+    <p>A one-second window slides through the chart a quarter-second at a time, counting:</p>
+    <dl class="defs">
+      <div><dt>Notes</dt><dd>Notes per second. A chord counts as one note, as in the game.</dd></div>
+      <div><dt>Movement</dt><dd>How much your hand changes per second: the frets lifted or added between one note and the next.
+        Green → Yellow is 1, Green → Green-Yellow-Blue is 2. A fast passage on one fret has lots of notes but little movement.</dd></div>
+      <div><dt>Drums</dt><dd>Hands (pad hits per second), travel (newly struck pads, like movement) and kicks per second.
+        Charted roll lanes count at a capped rate.</dd></div>
+    </dl>
+
+    <h3>D, the Fretwork score</h3>
+    <p>For each count, Fretwork blends three numbers from the song: its busiest second, its average and its typical (median) second.
+      So one hard burst helps, but not as much as being hard all the way through. The results are added together, then adjusted twice:</p>
+    <ul>
+      <li><b>Unevenness:</b> songs that swing between bursts and rests get a small boost.</li>
+      <li><b>Length:</b> a song of about 3 minutes 50 seconds counts as normal. A 1-minute chart scores about 25% lower,
+        a 6-minute one about 10% higher.</li>
+    </ul>
+    <p>Higher D means harder. Each instrument has its own scale, so compare guitar with guitar and drums with drums.</p>
+
+    <h3>The other numbers</h3>
+    <dl class="defs">
+      <div><dt>Tier 0–6</dt><dd>D sorted into seven bands per instrument, set so official charts spread across them roughly like the in-game difficulty dots. Stops at 6.</dd></div>
+      <div><dt>Open-ended tier</dt><dd>Keeps counting past 6. Each tier is roughly 15–20% more D than the one before, so very hard charts can reach 10 or more.</dd></div>
+      <div><dt>Harder than</dt><dd>The share of rated charts on this site, on the same instrument, with a lower D.</dd></div>
+      <div><dt>Movement</dt><dd>Average movement per second over the whole song.</dd></div>
+      <div><dt>Spread</dt><dd>How much the note rate swings over the song. Lower is steadier; higher means bursts and breaks.</dd></div>
+      <div><dt>Kicks, 2x</dt><dd>Average single-pedal kicks per second. If the chart has double kick, the tier counting those notes too is shown as well.</dd></div>
+      <div><dt>Graph</dt><dd>Click an instrument in a chart's details. The D line at each moment is notes plus movement (or hands, travel and kicks),
+        smoothed over 2 seconds, without the length and unevenness adjustments.</dd></div>
+    </dl>
+    <p class="dim">Full details are in Fretwork's <a href="https://github.com/Staycation44/fretwork/blob/main/Methodology.md">methodology</a>.</p>
+  </details>
+
   <section class="controls" aria-label="Search and filters">
     <label class="search">
       <span class="vh">Search</span>
@@ -99,15 +138,6 @@
     <button id="next" type="button">Next ›</button>
   </nav>
 
-  <details class="about">
-    <summary>What the numbers mean</summary>
-    <p><b>Tier 0–6</b> is Fretwork's difficulty score mapped onto the same spread as official in-game tiers, per instrument.
-      <b>Open-ended tier</b> keeps going past 6 for very hard charts. <b>D</b> is the raw score behind both.</p>
-    <p><b>Movement</b> is average hand movement per second (fret changes, or newly struck pads on drums).
-      <b>Spread</b> is how much the note rate swings over the song: low for an even chart, high for one with spikes.
-      Drums also show <b>kicks</b> (single-pedal kicks per second) and, when the chart has double kick, the open-ended tier counting it (<b>2x</b>).</p>
-    <p>Only Expert is rated. Fretwork rates 5-fret guitar, bass, rhythm, co-op, keys and drums; 6-fret and vocals aren't rated.</p>
-  </details>
 </main>
 
 <footer>

@@ -130,10 +130,20 @@ tr:last-child td { border-bottom: 0; }
 
 .pager { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 14px 0; color: var(--muted); font-size: 13px; }
 
-.about { margin: 18px 0; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; }
+.about { margin: 16px 0 0; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; font-size: 14px; }
 .about summary { cursor: pointer; color: var(--text); font-weight: 600; }
-.about p { max-width: 75ch; font-size: 14px; }
+.about summary:hover { color: var(--accent); }
+.about[open] summary { margin-bottom: 4px; }
+.about p, .about ul { max-width: 78ch; margin: 8px 0; }
+.about ul { padding-left: 20px; }
+.about li { margin: 3px 0; }
+.about .lead { color: var(--text); }
+.about h3 { margin: 18px 0 4px; font-size: 13px; color: var(--text); text-transform: uppercase; letter-spacing: .04em; }
 .about b { color: var(--text); font-weight: 600; }
+.about .defs { margin: 6px 0; display: grid; max-width: 90ch; }
+.about .defs > div { display: grid; grid-template-columns: 130px 1fr; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
+.about .defs dt { color: var(--text); font-weight: 600; }
+.about .defs dd { margin: 0; }
 
 footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28px; color: var(--muted); font-size: 13px; }
 
@@ -141,6 +151,7 @@ footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28
   .card dl { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
 }
 @media (max-width: 640px) {
+  .about .defs > div { grid-template-columns: 1fr; gap: 2px; }
   .card { grid-template-columns: 1fr; padding: 12px; }
   .card header { margin: 0 0 12px; }
   .card dl { border-left: 0; border-top: 1px solid var(--line); padding-top: 10px; grid-template-columns: 1fr 1fr; row-gap: 12px; }
