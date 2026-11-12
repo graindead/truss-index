@@ -4,7 +4,10 @@
 //!
 //!   truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N]
 //!                        [--no-list] [--retry-failed]
+//!                        [--overlap-hours N]
 //!   truss-index export [--db PATH] [--out DIR]
+//!   truss-index export-recent --since TIME [--db PATH] [--out FILE]
+//!   truss-index mark-snapshot [--db PATH]
 //!   truss-index stats  [--db PATH]
 
 #[allow(dead_code)] // copied whole from Truss; the scanner only needs the notes
@@ -26,12 +29,15 @@ use tokio::sync::Mutex;
 
 const USAGE: &str = "usage:
   truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N] [--no-list] [--retry-failed]
+                     [--overlap-hours N]
   truss-index export [--db PATH] [--out DIR]
+  truss-index export-recent --since TIME [--db PATH] [--out FILE]   (charts rated since TIME, for the watcher)
+  truss-index mark-snapshot [--db PATH]   (record that the database is being saved for a site build)
   truss-index stats  [--db PATH]";
 
 /// Encore's newest-first order can lag a little behind uploads, so an incremental listing keeps
-/// going this far past the last listing's newest chart.
-const OVERLAP_DAYS: i64 = 3;
+/// going this far past the last listing's newest chart (default; the watcher uses less).
+const OVERLAP_HOURS: i64 = 72;
 /// Give up the run after this many failures in a row (Encore is probably down).
 const MAX_CONSECUTIVE_FAILS: usize = 40;
 
@@ -45,6 +51,8 @@ struct Args {
     list_pages: Option<u32>,
     no_list: bool,
     retry_failed: bool,
+    overlap_hours: i64,
+    since: Option<String>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -60,6 +68,8 @@ fn parse_args() -> Result<Args, String> {
         list_pages: None,
         no_list: false,
         retry_failed: false,
+        overlap_hours: OVERLAP_HOURS,
+        since: None,
     };
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -72,6 +82,8 @@ fn parse_args() -> Result<Args, String> {
             "--full-list" => a.full_list = true,
             "--no-list" => a.no_list = true,
             "--retry-failed" => a.retry_failed = true,
+            "--overlap-hours" => a.overlap_hours = val()?.parse::<i64>().map_err(|_| "--overlap-hours: not a number")?.max(0),
+            "--since" => a.since = Some(val()?),
             _ => return Err(format!("unknown option {flag}\n{USAGE}")),
         }
     }
@@ -105,6 +117,15 @@ async fn main() {
     let result = match args.cmd.as_str() {
         "scan" => scan(&args).await,
         "export" => Db::open(&args.db).and_then(|db| export::export(&db, &args.out)),
+        "export-recent" => match &args.since {
+            None => Err("export-recent needs --since TIME".to_string()),
+            Some(since) => {
+                // --out defaults to the site data folder; here it names a file.
+                let out = if args.out.extension().is_some() { args.out.clone() } else { PathBuf::from("live/recent.json") };
+                Db::open(&args.db).and_then(|db| export::export_recent(&db, since, &out)).map(|_| ())
+            }
+        },
+        "mark-snapshot" => Db::open(&args.db).and_then(|db| db.set_meta("snapshot_at", &now())),
         "stats" => Db::open(&args.db).map(|db| stats(&db)),
         _ => Err(USAGE.to_string()),
     };
@@ -141,7 +162,7 @@ async fn list_catalog(db: &mut Db, client: &reqwest::Client, args: &Args) -> Res
     let run_start = now();
     let watermark = if args.full_list { None } else { db.get_meta("list_watermark") };
     let cutoff = watermark.as_deref().and_then(|w| chrono::DateTime::parse_from_rfc3339(w).ok()).map(|w| {
-        (w - chrono::Duration::days(OVERLAP_DAYS)).to_utc().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
+        (w - chrono::Duration::hours(args.overlap_hours)).to_utc().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
     });
     match &cutoff {
         Some(c) => println!("listing Encore charts modified since {c}"),

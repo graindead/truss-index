@@ -180,3 +180,10 @@ footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28
 .gplot .ax { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .gplot .cursor { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .gplot .hit { cursor: crosshair; }
+
+/* Charts that arrived through the live file, before the next full rebuild. */
+.song .new {
+  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 3px; vertical-align: 1px;
+  font-size: 11px; font-weight: 700; color: var(--chip-text); background: var(--accent);
+}
+#meta[title] { cursor: help; text-decoration: underline dotted var(--line); text-underline-offset: 3px; }

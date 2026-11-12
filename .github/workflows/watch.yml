@@ -1,0 +1,130 @@
+# Watches Chorus Encore and keeps Truss Index current within minutes.
+#
+# One run lasts about 5.5 hours (GitHub's job limit is 6) and starts the next one itself, so it
+# doesn't rely on GitHub's scheduler, which can skip runs. Each run:
+#   - every 2 minutes, lists what changed on Encore (usually 2 small requests), rates new charts,
+#     and, only when something changed, force-pushes recent.json (the charts rated since the live
+#     site's database snapshot) to the single-commit "live" branch. The site reads it through
+#     raw.githubusercontent.com, whose cache serves every visitor, so Encore is contacted once
+#     per new chart however many people visit.
+#   - every hour, saves the database to the "data" release and starts "Deploy site", which
+#     republishes the full chart list; recent.json then shrinks back to the newest charts.
+#   - on Sundays at 05:xx UTC, also lists the whole catalog to drop charts Encore removed.
+# This is the only job that writes the database.
+#
+# The schedule below is only a fallback that restarts the chain if it ever breaks; while a run is
+# going, a scheduled one waits in the queue and is replaced by the next chained run.
+
+name: Watch Encore
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 */3 * * *"
+
+permissions:
+  contents: write   # the "live" branch, the "data" release, the keep-alive commit
+  actions: write    # start "Deploy site" and the next watch run
+
+concurrency:
+  group: watch-encore
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SITE: https://graindead.github.io/truss-index
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub turns off schedules in repos with no commits for 60 days.
+      - name: Keep the fallback schedule active
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 50 * 86400 )) ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Keep the watcher's fallback schedule active"
+            git push
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Build scanner
+        run: cargo build --release
+
+      - name: Download database
+        run: |
+          mkdir -p data
+          gh release download data --pattern fretwork.db.gz --dir data
+          gunzip -f data/fretwork.db.gz
+
+      - name: Watch
+        shell: bash
+        run: |
+          # Keep going through a failed round (an Encore or GitHub hiccup); the next round retries.
+          set +e
+          bin=./target/release/truss-index
+          bot=(-c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com")
+          end=$(( $(date +%s) + 330 * 60 ))
+          next_save=$(( $(date +%s) + 3600 ))
+
+          save_and_deploy() {
+            $bin mark-snapshot || return 1
+            sqlite3 data/fretwork.db "PRAGMA wal_checkpoint(TRUNCATE);"
+            gzip -kf data/fretwork.db || return 1
+            gh release upload data data/fretwork.db.gz --clobber || return 1
+            gh workflow run deploy.yml
+          }
+
+          # One commit, force-pushed each time, so the branch never builds up history.
+          publish_live() {
+            local tmp rc
+            tmp=$(mktemp -d)
+            cp live/recent.json "$tmp/"
+            (
+              cd "$tmp" &&
+              git init -q -b live &&
+              git add recent.json &&
+              git "${bot[@]}" commit -q -m "Charts rated since the site's last build" &&
+              git push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" live
+            )
+            rc=$?
+            rm -rf "$tmp"
+            return $rc
+          }
+
+          full_done=""
+          while [ $(date +%s) -lt $end ]; do
+            flags="--overlap-hours 1 --limit 500"
+            if [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "05" ] && [ -z "$full_done" ]; then
+              flags="$flags --full-list"
+              full_done=1
+            fi
+            $bin scan $flags | grep -v '^  [0-9]*/'
+            [ "${PIPESTATUS[0]}" = 0 ] || echo "scan failed; trying again next round"
+
+            # The live site says which database snapshot it was built from.
+            since=$(curl -fsS "$SITE/data/meta.json" | jq -r '.snapshot // .exported // empty')
+            if [ -n "$since" ]; then
+              out=$($bin export-recent --since "$since" --out live/recent.json)
+              echo "$out"
+              case "$out" in
+                *"(changed)"*) publish_live && echo "published live/recent.json" || echo "publishing live/recent.json failed" ;;
+              esac
+            fi
+
+            if [ $(date +%s) -ge $next_save ]; then
+              save_and_deploy || echo "saving the database failed"
+              next_save=$(( $(date +%s) + 3600 ))
+            fi
+            sleep 120
+          done
+
+          save_and_deploy || echo "saving the database failed"
+          gh workflow run watch.yml && echo "started the next watch run"

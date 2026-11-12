@@ -60,6 +60,9 @@ Options:
 | `--retry-failed` | Try charts again that failed 3 times |
 
 `truss-index stats` prints counts. `truss-index export [--out site/data]` writes the site data.
+`truss-index export-recent --since TIME [--out FILE]` and `truss-index mark-snapshot` are used by
+the watcher (see below). `--overlap-hours N` sets how far past the last listing an incremental
+listing re-checks (default 72; the watcher uses 1).
 
 ### Resuming and keeping up to date
 
@@ -123,41 +126,64 @@ block `fetch` from `file://`.
 The filters are kept in the URL hash, e.g. `#i=4&min=3&max=4` for drums at tier 3–4, so a
 filtered view can be shared as a link.
 
-## Deploying to GitHub Pages
+## Keeping it up to date and deploying
 
-`.github/workflows/update.yml` runs every hour at :05 (GitHub often starts scheduled runs a few
-minutes late), and can also be started by hand from the Actions tab. Each run takes about 1.5
-minutes:
+Two workflows do this.
 
-1. downloads the database from a release tagged `data` (too large and changes too often to commit)
-2. builds the scanner and scans incrementally, rating up to 20,000 charts. The 05:xx UTC run on
-   Sundays also does a full listing to find removed charts
-3. uploads the database back to the `data` release
-4. exports `site/data` and deploys `site/` to Pages
+**`watch.yml` ("Watch Encore")** keeps the site current within minutes. It is the only job that
+writes the database. Each run lasts about 5.5 hours and starts the next one itself, so it doesn't
+depend on GitHub's scheduler, which can skip or delay scheduled runs. A run:
 
-GitHub switches off scheduled workflows in public repos after 60 days without a commit. These runs
-don't commit (the database goes to the release), so when the last commit is 50 days old a run
-pushes an empty "Keep the hourly update schedule active" commit.
+1. downloads the database from the release tagged `data` (too large and changes too often to
+   commit)
+2. every 2 minutes, lists what changed on Encore (usually 2 small requests: `scan --overlap-hours 1`)
+   and rates any new charts. If anything changed, it writes `recent.json` (`export-recent`: the
+   charts rated since the database snapshot the live site was built from) and force-pushes it as a
+   single commit to the `live` branch
+3. every hour, records a snapshot time (`mark-snapshot`), uploads the database to the `data`
+   release and starts "Deploy site"
+4. on Sundays at 05:xx UTC, also lists the whole catalog so charts Encore removed drop out
+
+The site loads `recent.json` from `raw.githubusercontent.com` and puts those charts at the top with
+a "new" badge. Open pages check again every 3 minutes. GitHub's raw-file cache (5 minutes) serves
+every visitor, so Encore is contacted once per new chart, however many people use the site. New
+charts usually appear within 5–10 minutes.
+
+Its schedule (every 3 hours) is only a fallback that restarts the chain if it ever breaks. While a
+run is going, a scheduled one waits in the queue and is replaced by the next chained run.
+
+**`deploy.yml` ("Deploy site")** builds the scanner and the graph module, downloads the database,
+exports `site/data` and deploys `site/` to Pages. The watcher starts it every hour; it also runs
+when the site's code changes on `main`, and can be started by hand from the Actions tab.
+
+GitHub switches off scheduled workflows in public repos after 60 days without a commit, so when the
+last commit is 50 days old the watcher pushes an empty "Keep the watcher's fallback schedule
+active" commit.
+
+A note on GitHub's rules: Actions may be used for building, testing, deploying and publishing the
+repository's own project. The watcher publishes this site's data, but it runs around the clock, so
+GitHub could object to it. If that happens, disable "Watch Encore" in the Actions tab. "Deploy site"
+can still be run by hand, and the scanner can run elsewhere (for example a Cloudflare Worker or a
+home PC) and upload the database the same way.
 
 To set it up:
 
 1. Push the repo to GitHub.
 2. Under **Settings → Pages**, set **Source** to **GitHub Actions**.
-3. Seed the database. Either run the full scan locally and upload it:
+3. Seed the database: run the full scan locally and upload it.
 
    ```bash
    gzip -k data/fretwork.db
    ```
 
    ```bash
-   gh release create data data/fretwork.db.gz --title "Scanner database" --notes "SQLite database used by the hourly update."
+   gh release create data data/fretwork.db.gz --title "Scanner database" --notes "SQLite database used by the watcher and site builds."
    ```
 
-   Or start the workflow by hand a few times. Each run rates up to 20,000 charts within GitHub's
-   6-hour job limit.
+4. Start "Watch Encore" once from the Actions tab. It keeps itself going from then on.
 
-With the full catalog (95,358 rated charts), `charts.json` is about 16 MB, or about 6 MB as Pages serves it gzipped. That
-is well inside Pages' limits (100 MB per file, 1 GB per site).
+With the full catalog (95,358 rated charts), `charts.json` is about 18 MB, or about 6.5 MB as
+Pages serves it gzipped. That is well inside Pages' limits (100 MB per file, 1 GB per site).
 
 ## Credits
 

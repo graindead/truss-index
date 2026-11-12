@@ -1,0 +1,81 @@
+# Builds and publishes the site to GitHub Pages from the saved database.
+#
+# The watcher (watch.yml) starts this every hour after saving the database to the "data" release;
+# it can also be run by hand from the Actions tab, e.g. after changing the site. It never scans
+# Encore or writes the database: the watcher is the only job that does.
+#
+# Setup: Settings → Pages → Source: "GitHub Actions". Seed the database first (see README).
+
+name: Deploy site
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ["site/**", "src/**", "wasm/**", ".github/workflows/deploy.yml"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: deploy-site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            wasm -> target
+
+      - name: Build scanner
+        run: cargo build --release
+
+      # The in-browser difficulty graphs: the scanner's parser and curve maths as WebAssembly.
+      - name: Build graph module
+        run: |
+          cargo build --release --manifest-path wasm/Cargo.toml --target wasm32-unknown-unknown
+          cp wasm/target/wasm32-unknown-unknown/release/truss_index_curves.wasm site/curves.wasm
+
+      - name: Download database
+        run: |
+          mkdir -p data
+          gh release download data --pattern fretwork.db.gz --dir data
+          gunzip -f data/fretwork.db.gz
+
+      - name: Export site data
+        run: ./target/release/truss-index export
+
+      # Give style.css and app.js a new address each commit, so browsers don't keep using
+      # their cached copies (Pages lets them cache for 10 minutes) after the site changes.
+      - name: Version the stylesheet and script
+        run: |
+          v="${GITHUB_SHA::8}"
+          sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
+          grep -E "style.css|app.js" site/index.html
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+      - id: deploy
+        uses: actions/deploy-pages@v4

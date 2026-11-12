@@ -200,7 +200,7 @@ function render(inst, tIdx) {
       const shown = sel ? [sel, ...rs.filter((x) => x !== sel)] : rs;
       const isOpen = open.has(md5);
       return `<tr class="row${isOpen ? " open" : ""}" data-md5="${md5}" tabindex="0" aria-expanded="${isOpen}">
-        <td class="song"><a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">${esc(name)}</a>
+        <td class="song"><a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">${esc(name)}</a>${fresh.has(md5) ? ` <span class="new" title="Added to Encore since the full list was last rebuilt">new</span>` : ""}
           <div class="by">${esc(artist)}${album && !/^unknown /i.test(album) ? ` — ${esc(album)}` : ""}</div></td>
         <td class="charter">${esc(charter)}</td>
         <td class="num">${fmtLen(len)}</td>
@@ -447,20 +447,69 @@ document.querySelectorAll("th[data-sort]").forEach((th) =>
 window.addEventListener("hashchange", () => { readState(); if (charts.length) apply(false); });
 
 // ---------- load ----------
+// ---------- live updates ----------
+// The watcher (.github/workflows/watch.yml) rates new Encore charts within minutes and publishes
+// them to the "live" branch; GitHub's raw-file cache serves that file to every visitor, so the
+// site never asks Encore itself. Rows here duplicate charts.json's once the site is rebuilt.
+const LIVE_URL = "https://raw.githubusercontent.com/graindead/truss-index/live/recent.json";
+const LIVE_EVERY_MS = 3 * 60 * 1000;
+let baseRows = [];      // charts.json
+let siteMeta = null;    // meta.json
+let liveChecked = null; // when the watcher last published new charts
+let fresh = new Set();  // md5s known only from the live file
+
+function setCharts(liveRows) {
+  const have = new Set(baseRows.map((r) => r[0]));
+  const extra = liveRows.filter((r) => !have.has(r[0]));
+  fresh = new Set(extra.map((r) => r[0]));
+  charts = [...extra, ...baseRows].map((row, idx) => ({ row, idx, text: fold(`${row[1]} ${row[2]} ${row[3]} ${row[4]}`) }));
+  byInst = NAMES.map(() => []);
+  for (const { row } of charts) for (const r of row[7]) byInst[r[0]].push(r[1]);
+  for (const a of byInst) a.sort((x, y) => x - y);
+}
+
+const fmtTime = (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+
+function showMeta() {
+  if (!siteMeta) return;
+  const updated = liveChecked && liveChecked > siteMeta.exported ? liveChecked : siteMeta.exported;
+  els.meta.textContent = `${charts.length.toLocaleString()} charts rated, updated ${fmtTime(updated)}.`;
+  els.meta.title = `Updated ${updated.replace("T", " ").slice(0, 16)} UTC. New Encore charts are checked every 2 minutes.`;
+}
+
+async function checkLive() {
+  try {
+    const r = await fetch(LIVE_URL);
+    if (!r.ok) return;
+    const d = await r.json();
+    const before = fresh.size;
+    const known = new Set(charts.map((c) => c.row[0]));
+    const added = d.rows.some((row) => !known.has(row[0]));
+    liveChecked = d.checked;
+    if (added || d.rows.length !== before) {
+      setCharts(d.rows);
+      apply(false);
+    }
+    showMeta();
+  } catch {
+    // The live file is a bonus; the published list still works without it.
+  }
+}
+
 (async () => {
   readState();
   try {
     // meta.json is tiny and always fetched fresh; its export time versions the big file, so a
     // new export is never hidden behind a cached charts.json.
-    const meta = await fetch("data/meta.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
-    const v = meta ? `?v=${encodeURIComponent(meta.exported)}` : "";
+    siteMeta = await fetch("data/meta.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    const v = siteMeta ? `?v=${encodeURIComponent(siteMeta.exported)}` : "";
     const data = await fetch(`data/charts.json${v}`).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
-    charts = data.rows.map((row, idx) => ({ row, idx, text: fold(`${row[1]} ${row[2]} ${row[3]} ${row[4]}`) }));
-    byInst = NAMES.map(() => []);
-    for (const { row } of charts) for (const r of row[7]) byInst[r[0]].push(r[1]);
-    for (const a of byInst) a.sort((x, y) => x - y);
-    if (meta) els.meta.textContent = `${meta.charts.toLocaleString()} charts rated, updated ${meta.exported.slice(0, 10)}.`;
+    baseRows = data.rows;
+    setCharts([]);
+    showMeta();
     apply(false);
+    await checkLive();
+    setInterval(() => { if (!document.hidden) checkLive(); }, LIVE_EVERY_MS);
   } catch (e) {
     els.count.textContent = `Couldn't load the chart list (${e.message}).`;
   }
