@@ -91,6 +91,14 @@ jobs:
       - name: Export site data
         run: ./target/release/fretwork-scan export
 
+      # Give style.css and app.js a new address each commit, so browsers don't keep using
+      # their cached copies (Pages lets them cache for 10 minutes) after the site changes.
+      - name: Version the stylesheet and script
+        run: |
+          v="${GITHUB_SHA::8}"
+          sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
+          grep -E "style.css|app.js" site/index.html
+
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
