@@ -12,7 +12,7 @@ name: Update ratings
 
 on:
   schedule:
-    - cron: "17 * * * *"   # hourly, at :17 (GitHub may start it some minutes late)
+    - cron: "0 * * * *"   # hourly, on the hour (GitHub may start it some minutes late)
   workflow_dispatch:
     inputs:
       full_list:
