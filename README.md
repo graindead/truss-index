@@ -107,14 +107,19 @@ filtered view can be shared as a link.
 
 ## Deploying to GitHub Pages
 
-`.github/workflows/update.yml` runs every day at 05:17 UTC, and can also be started by hand. Each
-run:
+`.github/workflows/update.yml` runs every hour at :17 (GitHub often starts scheduled runs a few
+minutes late), and can also be started by hand from the Actions tab. Each run takes about 1.5
+minutes:
 
 1. downloads the database from a release tagged `data` (too large and changes too often to commit)
-2. builds the scanner and scans incrementally, rating up to 20,000 charts. Sundays also do a full
-   listing to find removed charts
+2. builds the scanner and scans incrementally, rating up to 20,000 charts. The 05:xx UTC run on
+   Sundays also does a full listing to find removed charts
 3. uploads the database back to the `data` release
 4. exports `site/data` and deploys `site/` to Pages
+
+GitHub switches off scheduled workflows in public repos after 60 days without a commit. These runs
+don't commit (the database goes to the release), so when the last commit is 50 days old a run
+pushes an empty "Keep the hourly update schedule active" commit.
 
 To set it up:
 
@@ -127,7 +132,7 @@ To set it up:
    ```
 
    ```bash
-   gh release create data data/fretwork.db.gz --title "Scanner database" --notes "SQLite database used by the daily update."
+   gh release create data data/fretwork.db.gz --title "Scanner database" --notes "SQLite database used by the hourly update."
    ```
 
    Or start the workflow by hand a few times. Each run rates up to 20,000 charts within GitHub's

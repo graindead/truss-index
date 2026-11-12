@@ -1,8 +1,10 @@
-# Rates new Encore charts every day and redeploys the site to GitHub Pages.
+# Rates new Encore charts every hour and redeploys the site to GitHub Pages.
 #
 # The SQLite database lives as an asset on a release tagged "data" (too big and too churny to
 # commit). Each run downloads it, scans incrementally, exports the site data, uploads the
-# database again and deploys. Sundays also do a full catalog listing to notice removed charts.
+# database again and deploys. The 05:xx UTC run on Sundays also lists the whole catalog to notice
+# removed charts. GitHub turns off schedules in repos with no commits for 60 days, so a run
+# pushes an empty commit when the last one is 50 days old.
 #
 # Setup: Settings → Pages → Source: "GitHub Actions". Seed the database first (see README).
 
@@ -10,7 +12,7 @@ name: Update ratings
 
 on:
   schedule:
-    - cron: "17 5 * * *"   # daily, 05:17 UTC
+    - cron: "17 * * * *"   # hourly, at :17 (GitHub may start it some minutes late)
   workflow_dispatch:
     inputs:
       full_list:
@@ -42,6 +44,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Keep the schedule alive
+        if: github.event_name == 'schedule'
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 50 * 86400 )) ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit --allow-empty -m "Keep the hourly update schedule active"
+            git push
+          fi
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
@@ -61,7 +74,7 @@ jobs:
       - name: Scan
         run: |
           FLAGS="--limit ${{ inputs.limit || '20000' }}"
-          if [ "${{ inputs.full_list }}" = "true" ] || [ "$(date -u +%u)" = "7" ]; then
+          if [ "${{ inputs.full_list }}" = "true" ] || { [ "$(date -u +%u)" = "7" ] && [ "$(date -u +%H)" = "05" ]; }; then
             FLAGS="$FLAGS --full-list"
           fi
           ./target/release/fretwork-scan scan $FLAGS
