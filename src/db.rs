@@ -155,7 +155,9 @@ impl Db {
         for (inst, r) in ratings {
             tx.execute(
                 "INSERT INTO ratings (md5, instrument, d, remap, tier, movement, spread, kicks, tier_2x)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)
+                 -- A chart file can hold the same Expert track twice; the first one counts.
+                 ON CONFLICT(md5, instrument) DO NOTHING",
                 params![md5, inst, r.d, r.remap, r.tier, r.movement, r.spread, r.kicks, r.tier_2x],
             )
             .map_err(|e| e.to_string())?;
