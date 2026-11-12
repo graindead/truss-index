@@ -7,7 +7,6 @@
 //!                        [--overlap-hours N]
 //!   truss-index export [--db PATH] [--out DIR]
 //!   truss-index export-recent --since TIME [--db PATH] [--out FILE]
-//!   truss-index mark-snapshot [--db PATH]
 //!   truss-index stats  [--db PATH]
 
 #[allow(dead_code)] // copied whole from Truss; the scanner only needs the notes
@@ -32,7 +31,6 @@ const USAGE: &str = "usage:
                      [--overlap-hours N]
   truss-index export [--db PATH] [--out DIR]
   truss-index export-recent --since TIME [--db PATH] [--out FILE]   (charts rated since TIME, for the watcher)
-  truss-index mark-snapshot [--db PATH]   (record that the database is being saved for a site build)
   truss-index stats  [--db PATH]";
 
 /// Encore's newest-first order can lag a little behind uploads, so an incremental listing keeps
@@ -125,7 +123,6 @@ async fn main() {
                 Db::open(&args.db).and_then(|db| export::export_recent(&db, since, &out)).map(|_| ())
             }
         },
-        "mark-snapshot" => Db::open(&args.db).and_then(|db| db.set_meta("snapshot_at", &now())),
         "stats" => Db::open(&args.db).map(|db| stats(&db)),
         _ => Err(USAGE.to_string()),
     };

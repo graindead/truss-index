@@ -3,8 +3,8 @@
 # One run lasts about 5.5 hours (GitHub's job limit is 6) and starts the next one itself, so it
 # doesn't rely on GitHub's scheduler, which can skip runs. Each run:
 #   - every 2 minutes, lists what changed on Encore (usually 2 small requests), rates new charts,
-#     and, only when something changed, force-pushes recent.json (the charts rated since the live
-#     site's database snapshot) to the single-commit "live" branch. The site reads it through
+#     and, only when something changed, force-pushes recent.json (the charts rated after the
+#     newest rating in the database the live site was built from) to the single-commit "live" branch. The site reads it through
 #     raw.githubusercontent.com, whose cache serves every visitor, so Encore is contacted once
 #     per new chart however many people visit.
 #   - every hour, saves the database to the "data" release and starts "Deploy site", which
@@ -75,7 +75,6 @@ jobs:
           next_save=$(( $(date +%s) + 3600 ))
 
           save_and_deploy() {
-            $bin mark-snapshot || return 1
             sqlite3 data/fretwork.db "PRAGMA wal_checkpoint(TRUNCATE);"
             gzip -kf data/fretwork.db || return 1
             gh release upload data data/fretwork.db.gz --clobber || return 1

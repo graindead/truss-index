@@ -60,7 +60,7 @@ Options:
 | `--retry-failed` | Try charts again that failed 3 times |
 
 `truss-index stats` prints counts. `truss-index export [--out site/data]` writes the site data.
-`truss-index export-recent --since TIME [--out FILE]` and `truss-index mark-snapshot` are used by
+`truss-index export-recent --since TIME [--out FILE]` is used by
 the watcher (see below). `--overlap-hours N` sets how far past the last listing an incremental
 listing re-checks (default 72; the watcher uses 1).
 
@@ -138,9 +138,10 @@ depend on GitHub's scheduler, which can skip or delay scheduled runs. A run:
    commit)
 2. every 2 minutes, lists what changed on Encore (usually 2 small requests: `scan --overlap-hours 1`)
    and rates any new charts. If anything changed, it writes `recent.json` (`export-recent`: the
-   charts rated since the database snapshot the live site was built from) and force-pushes it as a
+   charts rated after the newest rating in the database the live site was built from, which the
+   site's `meta.json` reports as `snapshot`) and force-pushes it as a
    single commit to the `live` branch
-3. every hour, records a snapshot time (`mark-snapshot`), uploads the database to the `data`
+3. every hour, uploads the database to the `data`
    release and starts "Deploy site"
 4. on Sundays at 05:xx UTC, also lists the whole catalog so charts Encore removed drop out
 

@@ -96,9 +96,10 @@ pub fn export(db: &Db, out: &Path) -> Result<(), String> {
     std::fs::write(&path, serde_json::to_string(&charts).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     let meta = json!({
         "exported": crate::now(),
-        // When the database this export came from was saved: the watcher's recent.json holds
-        // the charts rated after it.
-        "snapshot": db.get_meta("snapshot_at"),
+        // The newest rating in the database this export came from. The watcher's recent.json
+        // holds every chart rated after it, so nothing falls between the two however this build
+        // was started (the watcher's hourly save, a code push, or by hand).
+        "snapshot": db.conn.query_row("SELECT MAX(rated_at) FROM charts", [], |r| r.get::<_, Option<String>>(0)).ok().flatten(),
         "charts": out_rows.len(),
         "listed": db.count("SELECT COUNT(*) FROM charts WHERE removed = 0"),
         "rated": db.count("SELECT COUNT(*) FROM charts WHERE removed = 0 AND rated_at IS NOT NULL"),
