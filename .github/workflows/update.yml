@@ -12,7 +12,7 @@ name: Update ratings
 
 on:
   schedule:
-    - cron: "0 * * * *"   # hourly, on the hour (GitHub may start it some minutes late)
+    - cron: "5 * * * *"   # hourly at :05; just past the busy top of the hour, so GitHub starts it closer to on time
   workflow_dispatch:
     inputs:
       full_list:

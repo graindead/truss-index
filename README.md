@@ -107,7 +107,7 @@ filtered view can be shared as a link.
 
 ## Deploying to GitHub Pages
 
-`.github/workflows/update.yml` runs every hour on the hour (GitHub often starts scheduled runs a few
+`.github/workflows/update.yml` runs every hour at :05 (GitHub often starts scheduled runs a few
 minutes late), and can also be started by hand from the Actions tab. Each run takes about 1.5
 minutes:
 
