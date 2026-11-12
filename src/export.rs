@@ -2,7 +2,8 @@
 //! `meta.json` (counts and the export time).
 //!
 //! charts.json: { "instruments": [...], "rows": [[md5, name, artist, album, charter, lengthSec,
-//!   modifiedDate, [[inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null], ...]], ...] }
+//!   modifiedDate, [[inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null], ...],
+//!   genre, year], ...] }
 //! `inst` indexes "instruments". Numbers are scaled to integers to keep the file small.
 
 use crate::db::Db;
@@ -52,7 +53,7 @@ pub fn export(db: &Db, out: &Path) -> Result<(), String> {
     let mut st = db
         .conn
         .prepare(
-            "SELECT md5, name, artist, album, charter, song_length, modified_time FROM charts
+            "SELECT md5, name, artist, album, charter, song_length, modified_time, genre, year FROM charts
              WHERE removed = 0 AND rated_at IS NOT NULL ORDER BY modified_time DESC",
         )
         .map_err(e)?;
@@ -72,6 +73,8 @@ pub fn export(db: &Db, out: &Path) -> Result<(), String> {
             len.map(|ms| (ms + 500) / 1000).unwrap_or(0),
             modified.get(..10).unwrap_or(""),
             ratings,
+            s(7),
+            s(8),
         ]));
     }
 

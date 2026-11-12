@@ -43,14 +43,35 @@
     <label>Max tier <input id="tmax" type="number" min="0" step="1" inputmode="numeric" placeholder="any"></label>
     <label>Sort
       <select id="sort">
-        <option value="d-desc">Hardest first</option>
-        <option value="d-asc">Easiest first</option>
-        <option value="mod-desc">Newest first</option>
-        <option value="name-asc">Song A–Z</option>
-        <option value="artist-asc">Artist A–Z</option>
-        <option value="charter-asc">Charter A–Z</option>
-        <option value="len-desc">Longest first</option>
-        <option value="len-asc">Shortest first</option>
+        <optgroup label="Date">
+          <option value="mod-desc">Newest first (as on Encore)</option>
+          <option value="mod-asc">Oldest first</option>
+        </optgroup>
+        <optgroup label="Difficulty">
+          <option value="d-desc">Hardest first</option>
+          <option value="d-asc">Easiest first</option>
+          <option value="move-desc">Most movement</option>
+          <option value="move-asc">Least movement</option>
+          <option value="spread-desc">Spikiest (spread)</option>
+          <option value="spread-asc">Most even (spread)</option>
+          <option value="kicks-desc">Most kicks (drums)</option>
+          <option value="kicks-asc">Fewest kicks (drums)</option>
+        </optgroup>
+        <optgroup label="Name">
+          <option value="name-asc">Song A–Z</option>
+          <option value="name-desc">Song Z–A</option>
+          <option value="artist-asc">Artist A–Z</option>
+          <option value="artist-desc">Artist Z–A</option>
+          <option value="album-asc">Album A–Z</option>
+          <option value="charter-asc">Charter A–Z</option>
+          <option value="charter-desc">Charter Z–A</option>
+        </optgroup>
+        <optgroup label="Song">
+          <option value="year-desc">Release year, newest</option>
+          <option value="year-asc">Release year, oldest</option>
+          <option value="len-desc">Longest first</option>
+          <option value="len-asc">Shortest first</option>
+        </optgroup>
       </select>
     </label>
     <button id="reset" type="button">Reset</button>
