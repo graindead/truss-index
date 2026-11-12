@@ -1,6 +1,7 @@
-# Fretwork Ratings
+# Truss Index
 
-A static website listing every [Chorus Encore](https://www.enchor.us) chart with its
+A static website, part of the [Truss](https://github.com/graindead/truss) family, listing every
+[Chorus Encore](https://www.enchor.us) chart with its
 [Fretwork](https://github.com/Staycation44/fretwork) difficulty rating. Search, sort, filter by
 instrument and tier, and jump to the chart on enchor.us.
 

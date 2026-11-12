@@ -84,7 +84,7 @@ fn now() -> String {
 fn client() -> reqwest::Client {
     let _ = rustls::crypto::ring::default_provider().install_default();
     reqwest::Client::builder()
-        .user_agent(concat!("fretwork-site-scanner/", env!("CARGO_PKG_VERSION"), " (+https://github.com/graindead)"))
+        .user_agent(concat!("truss-index-scanner/", env!("CARGO_PKG_VERSION"), " (+https://github.com/graindead/truss-index)"))
         .connect_timeout(Duration::from_secs(15))
         .timeout(Duration::from_secs(60))
         .pool_max_idle_per_host(8)
