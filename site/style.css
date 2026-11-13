@@ -154,6 +154,7 @@ tr:last-child td { border-bottom: 0; }
 .about .defs dd { margin: 0; }
 
 footer { border-top: 1px solid var(--line); margin-top: 24px; padding: 14px 0 28px; color: var(--muted); font-size: 13px; }
+footer .disclaimer { margin-top: 10px; padding: 8px 12px; border: 1px solid var(--line); border-left: 3px solid var(--warning); border-radius: 4px; color: var(--text); max-width: 75ch; }
 
 @media (max-width: 980px) and (min-width: 641px) {
   .card dl { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 10px; }
