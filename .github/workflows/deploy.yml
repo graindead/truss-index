@@ -84,6 +84,9 @@ jobs:
           v="${GITHUB_SHA::8}"
           sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
           grep -E "style.css|app.js" site/index.html
+          # meta.json (always fetched fresh) names the build, so a page from an older build can
+          # notice and reload itself.
+          jq --arg v "$v" '.build = $v' site/data/meta.json > meta.tmp && mv meta.tmp site/data/meta.json
 
       - uses: actions/configure-pages@v5
 

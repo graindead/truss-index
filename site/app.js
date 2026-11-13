@@ -515,6 +515,18 @@ async function checkLive() {
     // meta.json is tiny and always fetched fresh; its export time versions the big file, so a
     // new export is never hidden behind a cached charts.json.
     siteMeta = await fetch("data/meta.json", { cache: "no-cache" }).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    // A browser can keep the page itself for up to 10 minutes after an update. If this page is
+    // from an older build than the live data, refresh the saved copy and reload (once).
+    if (siteMeta?.build && ASSET_V && ASSET_V !== `?v=${siteMeta.build}`) {
+      let tried = null;
+      try { tried = sessionStorage.getItem("reloadedFor"); } catch {}
+      if (tried !== siteMeta.build) {
+        try { sessionStorage.setItem("reloadedFor", siteMeta.build); } catch {}
+        await fetch(location.pathname, { cache: "reload" }).catch(() => {});
+        location.reload();
+        return;
+      }
+    }
     const v = siteMeta ? `?v=${encodeURIComponent(siteMeta.exported)}` : "";
     const data = await fetch(`data/charts.json${v}`).then((r) => { if (!r.ok) throw new Error(`HTTP ${r.status}`); return r.json(); });
     baseRows = data.rows;
