@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Truss Index</title>
-<meta name="description" content="Every Chorus Encore chart with its difficulty rating, computed with Fretwork by Staycation.">
+<meta name="description" content="Chorus Encore and RhythmVerse charts with their difficulty ratings, computed with Fretwork by Staycation.">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,11 +12,11 @@
   <div class="wrap top">
     <div>
       <h1>Truss Index</h1>
-      <p class="sub">Difficulty ratings for Chorus Encore charts, computed from each chart's Expert notes with
+      <p class="sub">Difficulty ratings for Chorus Encore and RhythmVerse charts, computed from each chart's Expert notes with
         <a href="https://github.com/Staycation44/fretwork">Fretwork</a>'s maths. <span id="meta"></span></p>
     </div>
     <a class="truss-link" href="https://github.com/graindead/truss" target="_blank" rel="noopener"
-       title="Truss: a fast desktop app to search and download Clone Hero / YARG charts from Chorus Encore">
+       title="Truss: a fast desktop app to search and download Clone Hero / YARG charts from Chorus Encore and RhythmVerse">
       <b>Truss</b><span>chart downloader ↗</span></a>
   </div>
 </header>
@@ -66,6 +66,13 @@
       <span class="vh">Search</span>
       <input id="q" type="search" placeholder="Search song, artist, album or charter" autocomplete="off">
     </label>
+    <label>Source
+      <select id="src">
+        <option value="">All</option>
+        <option value="e">Chorus Encore</option>
+        <option value="r">RhythmVerse</option>
+      </select>
+    </label>
     <label>Instrument
       <select id="inst">
         <option value="">Any</option>
@@ -88,7 +95,7 @@
     <label>Sort
       <select id="sort">
         <optgroup label="Date">
-          <option value="mod-desc">Newest first (as on Encore)</option>
+          <option value="mod-desc">Newest first</option>
           <option value="mod-asc">Oldest first</option>
         </optgroup>
         <optgroup label="Difficulty">
@@ -148,7 +155,8 @@
 <footer>
   <div class="wrap">
     <p>Ratings use <a href="https://github.com/Staycation44/fretwork">Fretwork</a> by Staycation (MIT licence, formulas v3), ported to Rust.
-      Chart listings and files come from <a href="https://www.enchor.us">Chorus Encore</a>; each song links to its page there.
+      Chart listings and files come from <a href="https://www.enchor.us">Chorus Encore</a> and <a href="https://rhythmverse.co">RhythmVerse</a>;
+      each song links to its page there.
       Not affiliated with either. Charts belong to their charters.</p>
   </div>
 </footer>

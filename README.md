@@ -22,6 +22,14 @@ It has two parts:
   `sngpkg.rs` and `curves.rs`, so the graphs come from the same code as the ratings. No curve data
   is stored or published.
 
+- **RhythmVerse charts** come from the [truss-rv-index](../truss-rv-index) cacher, which rates them
+  with the same Fretwork port. `truss-index export --rv-state rv-state.sqlite [--rv-cache
+  rhythmverse.sqlite]` merges them into the list, newest first with the Encore charts. Their ids
+  are `rv:<file id>`, they carry an "RV" tag and link to their RhythmVerse page, and album, genre
+  and year come from Truss's RhythmVerse cache when given. Both files are opened read-only. The
+  deploy job downloads them from the `data` release as `rv-state.sqlite.gz` and
+  `rv-truss-cache.sqlite.gz` when they're there. Difficulty graphs are Encore-only for now.
+
 The chart parser (`src/chart.rs`), the `.sng` reader (`src/sng.rs`), the ini handling
 (`src/ini.rs`) and the Fretwork port (`src/fretwork.rs`) are copied from
 [Truss](https://github.com/graindead/truss).

@@ -5,7 +5,7 @@
 //!   truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N]
 //!                        [--no-list] [--retry-failed]
 //!                        [--overlap-hours N]
-//!   truss-index export [--db PATH] [--out DIR]
+//!   truss-index export [--db PATH] [--out DIR] [--rv-state PATH [--rv-cache PATH]]
 //!   truss-index export-recent --since TIME [--db PATH] [--out FILE]
 //!   truss-index stats  [--db PATH]
 
@@ -16,6 +16,7 @@ mod encore;
 mod export;
 mod fretwork;
 mod ini;
+mod rv;
 mod sng;
 mod sngpkg;
 
@@ -29,7 +30,7 @@ use tokio::sync::Mutex;
 const USAGE: &str = "usage:
   truss-index scan   [--db PATH] [--limit N] [--jobs N] [--full-list] [--list-pages N] [--no-list] [--retry-failed]
                      [--overlap-hours N]
-  truss-index export [--db PATH] [--out DIR]
+  truss-index export [--db PATH] [--out DIR] [--rv-state PATH [--rv-cache PATH]]   (RhythmVerse charts too)
   truss-index export-recent --since TIME [--db PATH] [--out FILE]   (charts rated since TIME, for the watcher)
   truss-index stats  [--db PATH]";
 
@@ -51,6 +52,8 @@ struct Args {
     retry_failed: bool,
     overlap_hours: i64,
     since: Option<String>,
+    rv_state: Option<PathBuf>,
+    rv_cache: Option<PathBuf>,
 }
 
 fn parse_args() -> Result<Args, String> {
@@ -68,6 +71,8 @@ fn parse_args() -> Result<Args, String> {
         retry_failed: false,
         overlap_hours: OVERLAP_HOURS,
         since: None,
+        rv_state: None,
+        rv_cache: None,
     };
     while let Some(flag) = it.next() {
         let mut val = || it.next().ok_or(format!("{flag} needs a value"));
@@ -82,6 +87,8 @@ fn parse_args() -> Result<Args, String> {
             "--retry-failed" => a.retry_failed = true,
             "--overlap-hours" => a.overlap_hours = val()?.parse::<i64>().map_err(|_| "--overlap-hours: not a number")?.max(0),
             "--since" => a.since = Some(val()?),
+            "--rv-state" => a.rv_state = Some(val()?.into()),
+            "--rv-cache" => a.rv_cache = Some(val()?.into()),
             _ => return Err(format!("unknown option {flag}\n{USAGE}")),
         }
     }
@@ -114,7 +121,10 @@ async fn main() {
     };
     let result = match args.cmd.as_str() {
         "scan" => scan(&args).await,
-        "export" => Db::open(&args.db).and_then(|db| export::export(&db, &args.out)),
+        "export" => Db::open(&args.db).and_then(|db| {
+            let rv = args.rv_state.as_deref().map(|s| (s, args.rv_cache.as_deref()));
+            export::export(&db, &args.out, rv)
+        }),
         "export-recent" => match &args.since {
             None => Err("export-recent needs --since TIME".to_string()),
             Some(since) => {

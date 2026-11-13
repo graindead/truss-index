@@ -60,8 +60,22 @@ jobs:
           gh release download data --pattern fretwork.db.gz --dir data
           gunzip -f data/fretwork.db.gz
 
+      # RhythmVerse charts: the truss-rv-index cacher's state and Truss's RhythmVerse cache (album,
+      # genre, year), uploaded to the "data" release. Optional: without them only Encore is listed.
+      - name: Download RhythmVerse data
+        run: |
+          if gh release download data --pattern 'rv-*.sqlite.gz' --dir data; then
+            gunzip -f data/rv-*.sqlite.gz
+          else
+            echo "No RhythmVerse data on the release; listing Encore charts only."
+          fi
+
       - name: Export site data
-        run: ./target/release/truss-index export
+        run: |
+          rv=""
+          [ -f data/rv-state.sqlite ] && rv="--rv-state data/rv-state.sqlite"
+          [ -n "$rv" ] && [ -f data/rv-truss-cache.sqlite ] && rv="$rv --rv-cache data/rv-truss-cache.sqlite"
+          ./target/release/truss-index export $rv
 
       # Give style.css and app.js a new address each commit, so browsers don't keep using
       # their cached copies (Pages lets them cache for 10 minutes) after the site changes.

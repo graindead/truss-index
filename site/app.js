@@ -12,7 +12,7 @@ const NAMES = ["Lead guitar", "Co-op guitar", "Rhythm", "Bass", "Drums", "Keys"]
 const SHORT = ["Guitar", "Co-op", "Rhythm", "Bass", "Drums", "Keys"];
 const $ = (id) => document.getElementById(id);
 const els = {
-  q: $("q"), inst: $("inst"), scale: $("scale"), tmin: $("tmin"), tmax: $("tmax"), sort: $("sort"),
+  q: $("q"), src: $("src"), inst: $("inst"), scale: $("scale"), tmin: $("tmin"), tmax: $("tmax"), sort: $("sort"),
   reset: $("reset"), count: $("count"), rows: $("rows"), prev: $("prev"), next: $("next"), page: $("page"), meta: $("meta"),
 };
 
@@ -26,6 +26,9 @@ let byInst = [];        // per instrument: every chart's D*100, sorted, for perc
 const fold = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const fmtLen = (s) => (s ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : "");
+// RhythmVerse charts (from the truss-rv-index cacher) have ids "rv:<file id>" and their page as row[11].
+const isRV = (id) => id.startsWith("rv:");
+const chartUrl = (row) => (isRV(row[0]) ? row[11] : `https://www.enchor.us/chart/${row[0]}`);
 const tierColor = (t) => `var(--t${Math.min(6, Math.max(0, t))})`;
 
 // ---------- state <-> URL ----------
@@ -33,6 +36,7 @@ function readState() {
   const p = new URLSearchParams(location.hash.slice(1));
   els.q.value = p.get("q") || "";
   els.inst.value = p.get("i") || "";
+  els.src.value = ["e", "r"].includes(p.get("src")) ? p.get("src") : "";
   els.scale.value = p.get("s") === "tier" ? "tier" : "remap";
   els.tmin.value = p.get("min") || "";
   els.tmax.value = p.get("max") || "";
@@ -44,6 +48,7 @@ function writeState() {
   const p = new URLSearchParams();
   if (els.q.value) p.set("q", els.q.value);
   if (els.inst.value) p.set("i", els.inst.value);
+  if (els.src.value) p.set("src", els.src.value);
   if (els.scale.value !== "remap") p.set("s", els.scale.value);
   if (els.tmin.value) p.set("min", els.tmin.value);
   if (els.tmax.value) p.set("max", els.tmax.value);
@@ -58,6 +63,7 @@ function apply(resetPage) {
   if (resetPage) page = 0;
   const words = fold(els.q.value).split(/\s+/).filter(Boolean);
   const inst = els.inst.value === "" ? -1 : +els.inst.value;
+  const src = els.src.value;
   const tIdx = els.scale.value === "tier" ? 3 : 2;
   const min = els.tmin.value === "" ? -Infinity : +els.tmin.value;
   const max = els.tmax.value === "" ? Infinity : +els.tmax.value;
@@ -65,6 +71,7 @@ function apply(resetPage) {
 
   view = [];
   for (const c of charts) {
+    if (src && (src === "r") !== isRV(c.row[0])) continue;
     if (words.length && !words.every((w) => c.text.includes(w))) continue;
     const rs = c.row[7];
     // The ratings that pass the filters: the chosen instrument's, or every one in range.
@@ -146,7 +153,8 @@ function meter(remap) {
 
 function card(r, sel, md5) {
   const key = `${md5}:${r[0]}`;
-  const gOpen = graphOpen.has(key);
+  const graphable = !isRV(md5); // graphs read Encore's .sng files; RhythmVerse archives aren't supported yet
+  const gOpen = graphable && graphOpen.has(key);
   const pct = percentile(r[0], r[1]);
   const kind = r[0] === 4 ? "drum" : NAMES[r[0]].toLowerCase();
   const stats = [
@@ -157,11 +165,13 @@ function card(r, sel, md5) {
     ["Spread", (r[5] / 100).toFixed(2), "How much the note rate swings over the song: low is even, high has spikes."],
   ];
   if (r[6] != null) stats.push(["Kicks", `${(r[6] / 100).toFixed(2)} <span class="dim">per second</span>`, "Average single-pedal kicks per second."]);
-  return `<section class="card${sel ? " sel" : ""}${gOpen ? " gopen" : ""}" data-key="${key}" tabindex="0" role="button" aria-expanded="${gOpen}"
-      aria-label="${NAMES[r[0]]}: ${gOpen ? "hide" : "show"} the difficulty graph">
+  const attrs = graphable
+    ? ` data-key="${key}" tabindex="0" role="button" aria-expanded="${gOpen}" aria-label="${NAMES[r[0]]}: ${gOpen ? "hide" : "show"} the difficulty graph"`
+    : "";
+  return `<section class="card${sel ? " sel" : ""}${gOpen ? " gopen" : ""}"${attrs}>
     <header><span class="t big" style="background:${tierColor(r[2])}">${r[2]}</span>
       <div><b>${NAMES[r[0]]}</b><div class="dim">Tier ${r[2]} of 6</div></div>${meter(r[2])}
-      <span class="gtoggle">${gOpen ? "Hide graph ▴" : "Show graph ▾"}</span></header>
+      ${graphable ? `<span class="gtoggle">${gOpen ? "Hide graph ▴" : "Show graph ▾"}</span>` : ""}</header>
     <dl>${stats.map(([k, v, tip]) => `<div title="${esc(tip)}"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
     ${gOpen ? `<div class="graph" data-key="${key}">${graphBody(md5, r[0])}</div>` : ""}
   </section>`;
@@ -179,13 +189,15 @@ function panel(row, inst) {
     known(year) && ["Year", esc(year)],
     charter && ["Charter", esc(charter)],
     len && ["Length", fmtLen(len)],
-    mod && ["Updated on Encore", mod],
+    mod && [isRV(md5) ? "Updated on RhythmVerse" : "Updated on Encore", mod],
   ].filter(Boolean);
   return `<div class="panel">
     <div class="facts">${facts.map(([k, v]) => `<span><span class="dim">${k}</span> ${v}</span>`).join("")}
-      <a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">Open on Chorus Encore ↗</a></div>
+      <a href="${esc(chartUrl(row))}" target="_blank" rel="noopener">Open on ${isRV(md5) ? "RhythmVerse" : "Chorus Encore"} ↗</a></div>
     <div class="cards">${shown.map((r) => card(r, r === sel, md5)).join("")}</div>
-    <p class="dim note">Expert only. Hover a figure for what it means; click an instrument to see its difficulty over the song.</p>
+    <p class="dim note">Expert only. Hover a figure for what it means; ${isRV(md5)
+       ? "difficulty graphs are only available for Chorus Encore charts for now."
+       : "click an instrument to see its difficulty over the song."}</p>
   </div>`;
 }
 
@@ -200,7 +212,7 @@ function render(inst, tIdx) {
       const shown = sel ? [sel, ...rs.filter((x) => x !== sel)] : rs;
       const isOpen = open.has(md5);
       return `<tr class="row${isOpen ? " open" : ""}" data-md5="${md5}" tabindex="0" aria-expanded="${isOpen}">
-        <td class="song"><a href="https://www.enchor.us/chart/${md5}" target="_blank" rel="noopener">${esc(name)}</a>${fresh.has(md5) ? ` <span class="new" title="Added to Encore since the full list was last rebuilt">new</span>` : ""}
+        <td class="song"><a href="${esc(chartUrl(c.row))}" target="_blank" rel="noopener">${esc(name)}</a>${isRV(md5) ? ` <span class="src-rv" title="From RhythmVerse">RV</span>` : ""}${fresh.has(md5) ? ` <span class="new" title="Added to Encore since the full list was last rebuilt">new</span>` : ""}
           <div class="by">${esc(artist)}${album && !/^unknown /i.test(album) ? ` — ${esc(album)}` : ""}</div></td>
         <td class="charter">${esc(charter)}</td>
         <td class="num">${fmtLen(len)}</td>
@@ -421,7 +433,7 @@ els.rows.addEventListener("keydown", (e) => {
 
 let timer;
 els.q.addEventListener("input", () => { clearTimeout(timer); timer = setTimeout(() => apply(true), 150); });
-for (const el of [els.inst, els.scale, els.tmin, els.tmax, els.sort]) el.addEventListener("change", () => apply(true));
+for (const el of [els.src, els.inst, els.scale, els.tmin, els.tmax, els.sort]) el.addEventListener("change", () => apply(true));
 els.tmin.addEventListener("input", () => apply(true));
 els.tmax.addEventListener("input", () => apply(true));
 els.prev.addEventListener("click", () => { page--; apply(false); scrollTo(0, 0); });
@@ -473,7 +485,8 @@ const fmtTime = (iso) => new Date(iso).toLocaleString(undefined, { dateStyle: "m
 function showMeta() {
   if (!siteMeta) return;
   const updated = liveChecked && liveChecked > siteMeta.exported ? liveChecked : siteMeta.exported;
-  els.meta.textContent = `${charts.length.toLocaleString()} charts rated, updated ${fmtTime(updated)}.`;
+  const rv = charts.reduce((n, c) => n + isRV(c.row[0]), 0);
+  els.meta.textContent = `${charts.length.toLocaleString()} charts rated${rv ? ` (${(charts.length - rv).toLocaleString()} Chorus Encore, ${rv.toLocaleString()} RhythmVerse)` : ""}, updated ${fmtTime(updated)}.`;
   els.meta.title = `Updated ${updated.replace("T", " ").slice(0, 16)} UTC. New Encore charts are checked every 2 minutes.`;
 }
 

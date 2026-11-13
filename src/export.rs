@@ -7,6 +7,7 @@
 //!   genre, year, hasVideo (0/1: the notes come from Encore's {md5}_novideo.sng)], ...] }
 //! `inst` indexes "instruments". Numbers are scaled to integers to keep the file small.
 //! recent.json: { "checked": time, "since": time, "rows": [same rows] }
+//! RhythmVerse rows (see rv.rs) have ids "rv:<file id>" and a 12th field, the RhythmVerse page.
 
 use crate::db::Db;
 use rusqlite::types::Value as SqlValue;
@@ -16,12 +17,12 @@ use std::path::Path;
 
 pub const INSTRUMENTS: [&str; 6] = ["guitar", "guitarcoop", "rhythm", "bass", "drums", "keys"];
 
-fn x100(v: f64) -> i64 {
+pub(crate) fn x100(v: f64) -> i64 {
     (v * 100.0).round() as i64
 }
 
 /// Site rows for the charts matching `filter` (an SQL condition on `charts c`), newest first.
-fn rows(db: &Db, filter: &str, params: &[SqlValue]) -> Result<Vec<Value>, String> {
+fn rows(db: &Db, filter: &str, params: &[SqlValue]) -> Result<Vec<(String, Value)>, String> {
     let e = |e: rusqlite::Error| e.to_string();
     let p = rusqlite::params_from_iter(params.iter());
 
@@ -71,7 +72,7 @@ fn rows(db: &Db, filter: &str, params: &[SqlValue]) -> Result<Vec<Value>, String
         let s = |i: usize| r.get::<_, Option<String>>(i).ok().flatten().unwrap_or_default();
         let len: Option<i64> = r.get(5).map_err(e)?;
         let modified = s(6);
-        out.push(json!([
+        out.push((modified.clone(), json!([
             md5,
             s(1),
             s(2),
@@ -83,14 +84,26 @@ fn rows(db: &Db, filter: &str, params: &[SqlValue]) -> Result<Vec<Value>, String
             s(7),
             s(8),
             r.get::<_, i64>(9).map_err(e)?,
-        ]));
+        ])));
     }
     Ok(out)
 }
 
-pub fn export(db: &Db, out: &Path) -> Result<(), String> {
+/// `rv`: the truss-rv-index state database and, optionally, Truss's RhythmVerse cache, to list
+/// RhythmVerse charts too.
+pub fn export(db: &Db, out: &Path, rv: Option<(&Path, Option<&Path>)>) -> Result<(), String> {
     std::fs::create_dir_all(out).map_err(|e| e.to_string())?;
-    let out_rows = rows(db, "c.removed = 0 AND c.rated_at IS NOT NULL", &[])?;
+    let mut all = rows(db, "c.removed = 0 AND c.rated_at IS NOT NULL", &[])?;
+    let encore_count = all.len();
+    let mut rv_count = 0;
+    if let Some((state, cache)) = rv {
+        let rv_rows = crate::rv::rows(state, cache)?;
+        rv_count = rv_rows.len();
+        all.extend(rv_rows);
+        // Both sources in one newest-first list (Encore's order is kept among its own charts).
+        all.sort_by(|a, b| b.0.cmp(&a.0));
+    }
+    let out_rows: Vec<Value> = all.into_iter().map(|(_, v)| v).collect();
     let charts = json!({ "instruments": INSTRUMENTS, "rows": out_rows });
     let path = out.join("charts.json");
     std::fs::write(&path, serde_json::to_string(&charts).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
@@ -101,6 +114,8 @@ pub fn export(db: &Db, out: &Path) -> Result<(), String> {
         // was started (the watcher's hourly save, a code push, or by hand).
         "snapshot": db.conn.query_row("SELECT MAX(rated_at) FROM charts", [], |r| r.get::<_, Option<String>>(0)).ok().flatten(),
         "charts": out_rows.len(),
+        "encore": encore_count,
+        "rhythmverse": rv_count,
         "listed": db.count("SELECT COUNT(*) FROM charts WHERE removed = 0"),
         "rated": db.count("SELECT COUNT(*) FROM charts WHERE removed = 0 AND rated_at IS NOT NULL"),
         "formulas": crate::db::FORMULA_VERSION,
@@ -114,11 +129,14 @@ pub fn export(db: &Db, out: &Path) -> Result<(), String> {
 /// The charts rated since `since` (the snapshot the live site was built from), for the watcher.
 /// Returns whether the rows differ from what `out` already held.
 pub fn export_recent(db: &Db, since: &str, out: &Path) -> Result<bool, String> {
-    let recent = rows(
+    let recent: Vec<Value> = rows(
         db,
         "c.removed = 0 AND c.rated_at IS NOT NULL AND c.rated_at >= ?1",
         &[SqlValue::Text(since.to_string())],
-    )?;
+    )?
+    .into_iter()
+    .map(|(_, v)| v)
+    .collect();
     let old_rows = std::fs::read_to_string(out)
         .ok()
         .and_then(|s| serde_json::from_str::<Value>(&s).ok())
@@ -136,7 +154,7 @@ pub fn export_recent(db: &Db, since: &str, out: &Path) -> Result<bool, String> {
 }
 
 /// Charter names often carry Clone Hero colour tags (`<color=#FF0000>Name</color>`).
-fn strip_tags(s: &str) -> String {
+pub(crate) fn strip_tags(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut in_tag = false;
     for c in s.chars() {
