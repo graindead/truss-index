@@ -36,9 +36,13 @@ It has two parts:
   long search never freezes the page, and Cancel simply stops the worker. Each Encore chart has a
   **Path** button (`#path=<md5>`) that loads its notes from Encore by byte range, as the graphs do.
   A `notes.chart`, `notes.mid` or `.sng` (with its `song.ini`, or a whole chart folder) can be
-  dropped onto the section instead. The only changes from Truss's copy: the image's text is handed
-  to the browser to draw (WebAssembly has no system fonts), the search runs on one thread, and
-  Truss's library-based tests are left out. CHOpt's optimiser tests run in the deploy
+  dropped onto the section instead. Changes from Truss's copy, to match CHOpt's own images: notes are
+  drawn with CHOpt's sprites (`src/chopt/sprites.rs`, a port of CHOpt's `generate_sprites.py`;
+  `CHOPT_SPRITES=<CHOpt's resources/sprites> cargo test` checks all 756 five-fret sprites against
+  CHOpt's PNGs), and translucent fills use CHOpt's (CImg's) blending maths. Compared with CHOpt 1.19's
+  image of the same chart, every pixel matches except the text, which the browser draws in its own
+  font (WebAssembly has no system fonts). The search also runs on one thread, and Truss's
+  library-based tests are left out. CHOpt's optimiser tests run in the deploy
   (`cargo test --manifest-path wasm-chopt/Cargo.toml`), and `TRUSS_TEST_SNG=<file.sng>` paths a
   local `.sng` natively to compare with the browser.
 

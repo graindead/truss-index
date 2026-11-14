@@ -8,7 +8,8 @@
 
 use super::builder::{DrawnNote, PathImage, Range};
 use super::song::{FLAGS_HOPO, FLAGS_TAP};
-use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Rect, Stroke, Transform};
+use super::sprites::{self, Shape};
+use tiny_skia::{FillRule, Paint, PathBuilder, Pixmap, Stroke, Transform};
 
 pub const IMAGE_WIDTH: u32 = 1024;
 const BEAT_WIDTH: f64 = 60.0;
@@ -58,16 +59,31 @@ impl Canvas {
     fn visible(&self, top: i32, bottom: i32) -> bool {
         bottom >= self.y0 && top < self.y0 + self.h()
     }
-    /// Fills [x0, x1] x [y0, y1] (inclusive, like CImg) blended at `opacity`.
+    /// Fills [x0, x1] x [y0, y1] (inclusive, like CImg) blended at `opacity`, with CImg's
+    /// draw_rectangle maths: `new = opacity * colour + (1 - opacity) * old` in single precision,
+    /// truncated to a byte (tiny-skia rounds, which put translucent fills 1/255 off CHOpt's).
     fn rect(&mut self, x0: i32, y0: i32, x1: i32, y1: i32, c: Rgb, opacity: f32) {
         if x1 < x0 || y1 < y0 || !self.visible(y0, y1) {
             return;
         }
-        let Some(r) = Rect::from_ltrb(x0 as f32, (y0 - self.y0) as f32, (x1 + 1) as f32, (y1 + 1 - self.y0) as f32) else { return };
-        let mut paint = Paint::default();
-        paint.set_color_rgba8(c[0], c[1], c[2], (opacity.clamp(0.0, 1.0) * 255.0).round() as u8);
-        paint.anti_alias = false;
-        self.pix.fill_rect(r, &paint, Transform::identity(), None);
+        let (w, h) = (self.pix.width() as i32, self.h());
+        let (xa, xb) = (x0.max(0), x1.min(w - 1));
+        let (ya, yb) = ((y0 - self.y0).max(0), (y1 - self.y0).min(h - 1));
+        if xa > xb || ya > yb {
+            return;
+        }
+        let nop = opacity.abs();
+        let cop = 1.0 - opacity.max(0.0);
+        let d = self.pix.data_mut();
+        for yy in ya..=yb {
+            for xx in xa..=xb {
+                let i = ((yy * w + xx) * 4) as usize;
+                for k in 0..3 {
+                    d[i + k] = (nop * c[k] as f32 + d[i + k] as f32 * cop) as u8;
+                }
+                d[i + 3] = 255;
+            }
+        }
     }
     fn hline(&mut self, x0: i32, x1: i32, y: i32, c: Rgb) {
         self.rect(x0, y, x1, y, c, 1.0);
@@ -199,38 +215,34 @@ fn draw_note(cv: &mut Canvas, img: &PathImage, n: &DrawnNote) {
         }
         colour_beat_range(cv, img, c, (n.beat, n.beat + len), range, opacity);
     }
+    // The note itself: CHOpt's sprite (see sprites.rs) for its shape and colours, blended in
+    // with the sprite's alpha and centred on the note, as in CHOpt's image.cpp draw_note.
     let (x, y) = get_xy(img, n.beat);
     if !cv.visible(y - 12, y + MEASURE_HEIGHT + 12) {
         return;
     }
-    let (fx, fy) = (x as f32 + 0.5, y as f32 + 0.5);
-    let hopo = n.flags & FLAGS_HOPO != 0;
+    // Clone Hero's engine draws HOPOs and taps.
     let tap = n.flags & FLAGS_TAP != 0;
-    if n.lengths[5] >= 0.0 {
-        // Open note: a bar across the staff.
-        let (top, bottom) = (y + 4, y + MEASURE_HEIGHT - 5);
-        let fill = if n.is_sp_note { [235, 235, 235] } else { FRET_COLOURS[5] };
-        cv.rect(x - 3, top, x + 3, bottom, [40, 40, 40], 1.0);
-        cv.rect(x - 2, top + 1, x + 2, bottom - 1, fill, 1.0);
-        if hopo || tap {
-            cv.rect(x - 1, top + 2, x + 1, bottom - 2, if tap { [20, 20, 20] } else { [255, 255, 255] }, 1.0);
-        }
+    let hopo = n.flags & FLAGS_HOPO != 0;
+    let shape = match (n.is_sp_note, tap, hopo) {
+        (true, true, _) => Shape::StarTap,
+        (true, false, true) => Shape::StarHopo,
+        (true, false, false) => Shape::Star,
+        (false, true, _) => Shape::CircleTap,
+        (false, false, true) => Shape::CircleHopo,
+        (false, false, false) => Shape::Circle,
+    };
+    let index = (0..n.lengths.len()).filter(|&i| n.lengths[i] != -1.0).fold(0u32, |a, i| a | 1 << i);
+    if index == 0 || index >= 64 {
+        return;
     }
-    for lane in 0..5 {
-        if n.lengths[lane] < 0.0 {
-            continue;
-        }
-        let cy = fy + lane_y(lane, img.lefty) as f32;
-        let fill = FRET_COLOURS[lane];
-        if n.is_sp_note {
-            star(cv, fx, cy, 8.0, fill);
-        } else {
-            circle(cv, fx, cy, 6.0, fill, Some([40, 40, 40]));
-        }
-        if tap {
-            circle(cv, fx, cy, 2.6, [20, 20, 20], None);
-        } else if hopo {
-            circle(cv, fx, cy, 2.6, [255, 255, 255], None);
+    let sp = sprites::get(shape, index, img.lefty);
+    let (sx, sy) = (x - sp.w / 2, y - (sp.h - MEASURE_HEIGHT) / 2);
+    for j in 0..sp.h {
+        for i in 0..sp.w {
+            let k = ((j * sp.w + i) * 4) as usize;
+            let px = &sp.rgba[k..k + 4];
+            cv.blend_px(sx + i, sy + j, [px[0], px[1], px[2]], px[3]);
         }
     }
 }

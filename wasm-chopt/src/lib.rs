@@ -288,5 +288,12 @@ mod tests {
         let opts = br#"{"instrument":"guitar","difficulty":"expert"}"#;
         let n = unsafe { super::run(opts.as_ptr(), opts.len()) };
         println!("{}", String::from_utf8_lossy(&super::OUT.lock().unwrap()[..n]));
+        // TRUSS_TEST_OUT=<prefix>: also write the whole image's pixels (<prefix>.rgba, 1024 wide)
+        // and its text (<prefix>.json), to compare with CHOpt's PNG.
+        if let Ok(prefix) = std::env::var("TRUSS_TEST_OUT") {
+            let n = super::render(0, 1 << 20);
+            std::fs::write(format!("{prefix}.rgba"), &super::OUT.lock().unwrap()[..n]).unwrap();
+            std::fs::write(format!("{prefix}.json"), &*super::TXT.lock().unwrap()).unwrap();
+        }
     }
 }

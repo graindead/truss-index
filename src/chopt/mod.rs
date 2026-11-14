@@ -13,7 +13,8 @@
 //! instruments. Finds the activations that score the most and draws the path as an image.
 //!
 //! Copied from Truss (src/chopt) for the Truss Index site, where it runs as WebAssembly. Changes:
-//! the image's text is handed to the browser to draw (draw.rs), and the search runs on one thread.
+//! the image's text is handed to the browser to draw (draw.rs), notes are drawn with CHOpt's own
+//! sprites (sprites.rs), and the search runs on one thread.
 
 mod builder;
 pub mod draw;
@@ -23,6 +24,7 @@ mod points;
 mod processed;
 mod song;
 mod sp;
+mod sprites;
 mod time;
 
 pub use builder::PathImage;
