@@ -2,7 +2,8 @@
 //! WebAssembly, driven from site/chopt-worker.js. No wasm-bindgen: plain exports over linear
 //! memory, with the loaded song and the last path kept here between calls.
 //!
-//!   alloc(len) -> ptr, free(ptr, len), out_ptr(), txt_ptr(), txt_len()
+//!   alloc(len) -> ptr, dealloc(ptr, len), out_ptr(), txt_ptr(), txt_len()  (not "free": that would
+//!   clash with the C library's free when the tests build natively on Linux)
 //!   header(ptr, len) -> n          JSON: {"need":true} | {"error"} | {"index","len","mid"}  (.sng header)
 //!   load_sng(hptr, hlen, cptr, clen) -> n    a .sng header + its (masked) notes file
 //!   load_files(cptr, clen, is_mid, iptr, ilen) -> n   a notes.chart/.mid and song.ini (may be empty)
@@ -67,7 +68,7 @@ pub extern "C" fn alloc(len: usize) -> *mut u8 {
 /// # Safety
 /// `ptr` and `len` must come from `alloc`.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn free(ptr: *mut u8, len: usize) {
+pub unsafe extern "C" fn dealloc(ptr: *mut u8, len: usize) {
     unsafe { drop(Vec::from_raw_parts(ptr, 0, len.max(1))) };
 }
 

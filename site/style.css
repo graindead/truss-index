@@ -253,7 +253,6 @@ button.primary:hover:not(:disabled) { background: var(--accent); filter: brightn
   flex: 1; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised);
   font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; max-height: 360px; overflow: auto;
 }
-.legend { font-size: 13px; margin: 10px 0; }
 .path-image { background: #fff; border-radius: 6px; overflow: hidden; max-width: 1024px; }
 .path-image canvas { display: block; width: 100%; height: auto; }
 @media (max-width: 640px) {

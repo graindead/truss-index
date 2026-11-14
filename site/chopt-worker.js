@@ -34,7 +34,7 @@ function call(ex, fn, ...args) {
   try {
     return ex[fn](...flat);
   } finally {
-    for (const [p, l] of owned) ex.free(p, l);
+    for (const [p, l] of owned) ex.dealloc(p, l);
   }
 }
 
