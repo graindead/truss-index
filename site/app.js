@@ -32,8 +32,13 @@ const chartUrl = (row) => (isRV(row[0]) ? row[11] : `https://www.enchor.us/chart
 const tierColor = (t) => `var(--t${Math.min(6, Math.max(0, t))})`;
 
 // ---------- state <-> URL ----------
+// "#path" or "#path=<md5>" is the Star Power paths section (path.js); everything else is the
+// chart list's filters.
+const isPathHash = () => /^#path(=|$)/.test(location.hash);
+let chartsHash = ""; // the chart list's filters, kept while the paths section is open
+
 function readState() {
-  const p = new URLSearchParams(location.hash.slice(1));
+  const p = new URLSearchParams(isPathHash() ? chartsHash.slice(1) : location.hash.slice(1));
   els.q.value = p.get("q") || "";
   els.inst.value = p.get("i") || "";
   els.src.value = ["e", "r"].includes(p.get("src")) ? p.get("src") : "";
@@ -55,6 +60,8 @@ function writeState() {
   if (els.sort.value !== DEFAULT_SORT) p.set("o", els.sort.value);
   if (page > 0) p.set("p", page + 1);
   const h = p.toString();
+  chartsHash = h ? `#${h}` : "";
+  if (isPathHash()) return; // don't touch the paths section's address
   history.replaceState(null, "", h ? `#${h}` : location.pathname + location.search);
 }
 
@@ -193,7 +200,8 @@ function panel(row, inst) {
   ].filter(Boolean);
   return `<div class="panel">
     <div class="facts">${facts.map(([k, v]) => `<span><span class="dim">${k}</span> ${v}</span>`).join("")}
-      <a href="${esc(chartUrl(row))}" target="_blank" rel="noopener">Open on ${isRV(md5) ? "RhythmVerse" : "Chorus Encore"} ↗</a></div>
+      <span class="links">${isRV(md5) ? "" : `<a href="#path=${md5}">Star Power path →</a>`}
+      <a href="${esc(chartUrl(row))}" target="_blank" rel="noopener">Open on ${isRV(md5) ? "RhythmVerse" : "Chorus Encore"} ↗</a></span></div>
     <div class="cards">${shown.map((r) => card(r, r === sel, md5)).join("")}</div>
     <p class="dim note">Expert only. Hover a figure for what it means; ${isRV(md5)
        ? "difficulty graphs are only available for Chorus Encore charts for now."
@@ -212,7 +220,7 @@ function render(inst, tIdx) {
       const shown = sel ? [sel, ...rs.filter((x) => x !== sel)] : rs;
       const isOpen = open.has(md5);
       return `<tr class="row${isOpen ? " open" : ""}" data-md5="${md5}" tabindex="0" aria-expanded="${isOpen}">
-        <td class="song"><a href="${esc(chartUrl(c.row))}" target="_blank" rel="noopener">${esc(name)}</a>${isRV(md5) ? ` <span class="src-rv" title="From RhythmVerse">RV</span>` : ""}${fresh.has(md5) ? ` <span class="new" title="Added to Encore since the full list was last rebuilt">new</span>` : ""}
+        <td class="song"><a href="${esc(chartUrl(c.row))}" target="_blank" rel="noopener">${esc(name)}</a>${isRV(md5) ? ` <span class="src-rv" title="From RhythmVerse">RV</span>` : ` <a class="path-btn" href="#path=${md5}" title="Find the best Star Power path with CHOpt">Path</a>`}${fresh.has(md5) ? ` <span class="new" title="Added to Encore since the full list was last rebuilt">new</span>` : ""}
           <div class="by">${esc(artist)}${album && !/^unknown /i.test(album) ? ` — ${esc(album)}` : ""}</div></td>
         <td class="charter">${esc(charter)}</td>
         <td class="num">${fmtLen(len)}</td>
@@ -456,7 +464,11 @@ document.querySelectorAll("th[data-sort]").forEach((th) =>
 );
 
 // A link or hand edit changing only the #state (writeState uses replaceState, which doesn't fire this).
-window.addEventListener("hashchange", () => { readState(); if (charts.length) apply(false); });
+window.addEventListener("hashchange", () => {
+  if (isPathHash()) return; // path.js handles the paths section
+  readState();
+  if (charts.length) apply(false);
+});
 
 // ---------- load ----------
 // ---------- live updates ----------

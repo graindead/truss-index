@@ -30,6 +30,18 @@ It has two parts:
   deploy job downloads them from the `data` release as `rv-state.sqlite.gz` and
   `rv-truss-cache.sqlite.gz` when they're there. Difficulty graphs are Encore-only for now.
 
+- **`wasm-chopt/`** is the **Star Power paths** section: Truss's Rust port of
+  [CHOpt](https://github.com/GenericMadScientist/CHOpt) by Raymond Wright (GPL-3.0), copied into
+  `src/chopt/` and built as `chopt.wasm`. It runs in a Web Worker (`site/chopt-worker.js`), so a
+  long search never freezes the page, and Cancel simply stops the worker. Each Encore chart has a
+  **Path** button (`#path=<md5>`) that loads its notes from Encore by byte range, as the graphs do.
+  A `notes.chart`, `notes.mid` or `.sng` (with its `song.ini`, or a whole chart folder) can be
+  dropped onto the section instead. The only changes from Truss's copy: the image's text is handed
+  to the browser to draw (WebAssembly has no system fonts), the search runs on one thread, and
+  Truss's library-based tests are left out. CHOpt's optimiser tests run in the deploy
+  (`cargo test --manifest-path wasm-chopt/Cargo.toml`), and `TRUSS_TEST_SNG=<file.sng>` paths a
+  local `.sng` natively to compare with the browser.
+
 The chart parser (`src/chart.rs`), the `.sng` reader (`src/sng.rs`), the ini handling
 (`src/ini.rs`) and the Fretwork port (`src/fretwork.rs`) are copied from
 [Truss](https://github.com/graindead/truss).
@@ -198,6 +210,8 @@ Pages serves it gzipped. That is well inside Pages' limits (100 MB per file, 1 G
 
 - **Fretwork** by Staycation, https://github.com/Staycation44/fretwork (MIT licence). The
   difficulty formulas (v3) are theirs; this project only ports the maths to Rust.
+- **CHOpt** by Raymond Wright, https://github.com/GenericMadScientist/CHOpt (GPL-3.0). The Star
+  Power paths section runs Truss's Rust port of it.
 - **Chorus Encore**, https://www.enchor.us. The chart catalog and files come from Encore's
   public API and file host. Not affiliated with Encore. Charts belong to their charters.
 

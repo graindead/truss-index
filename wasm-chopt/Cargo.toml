@@ -1,0 +1,27 @@
+[package]
+name = "truss-index-chopt"
+version = "0.1.0"
+edition = "2024"
+description = "CHOpt (Star Power path optimiser) compiled to WebAssembly for the Truss Index site"
+license = "GPL-3.0-or-later"
+publish = false
+
+# Build: cargo build --release --target wasm32-unknown-unknown
+# Output: target/wasm32-unknown-unknown/release/truss_index_chopt.wasm -> site/chopt.wasm
+# Tests (CHOpt's optimiser tests, natively): cargo test
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+
+[dependencies]
+tiny-skia = { version = "0.11", default-features = false, features = ["std"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

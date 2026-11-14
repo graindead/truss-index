@@ -204,3 +204,59 @@ footer .disclaimer { margin-top: 10px; padding: 8px 12px; border: 1px solid var(
   font-size: 11px; font-weight: 700; color: var(--chip-text); background: var(--accent);
 }
 #meta[title] { cursor: help; text-decoration: underline dotted var(--line); text-underline-offset: 3px; }
+
+/* ---------- sections ---------- */
+.tabs { display: flex; gap: 4px; margin-top: 12px; border-bottom: 1px solid var(--line); }
+.tabs a {
+  padding: 8px 14px; color: var(--muted); text-decoration: none; font-weight: 600; font-size: 14px;
+  border-bottom: 2px solid transparent; margin-bottom: -1px;
+}
+.tabs a:hover { color: var(--text); }
+.tabs a.on { color: var(--text); border-bottom-color: var(--accent); }
+body > header { border-bottom: 0; padding-bottom: 4px; }
+
+/* Path button on Encore rows, and links in the details panel. */
+.song .path-btn {
+  display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 3px; vertical-align: 1px;
+  font-size: 11px; font-weight: 700; color: var(--accent); border: 1px solid var(--accent);
+  text-decoration: none; opacity: .75;
+}
+.song .path-btn:hover { opacity: 1; background: var(--tint); }
+.facts .links { margin-left: auto; display: inline-flex; gap: 16px; }
+.facts .links a { margin-left: 0; }
+
+/* ---------- Star Power paths ---------- */
+.path-intro h2 { margin: 18px 0 4px; font-size: 18px; }
+.path-intro p { margin: 0 0 12px; max-width: 80ch; font-size: 14px; }
+.dropzone {
+  border: 1.5px dashed var(--line); border-radius: 6px; padding: 16px; margin: 0 0 12px;
+  background: var(--raised); transition: border-color .15s, background .15s;
+}
+.dropzone.over { border-color: var(--accent); background: var(--tint); }
+.dropzone > div { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.dropzone > div[hidden] { display: none; }
+.dropzone .dim { font-size: 13px; }
+.pick {
+  margin-left: auto; cursor: pointer; padding: 6px 12px; border: 1px solid var(--line); border-radius: 6px;
+  font-size: 13px; color: var(--text); background: var(--bg);
+}
+.pick:hover { border-color: var(--accent); }
+.pick input { display: none; }
+.path-opts input[type=number] { width: 86px; }
+.path-opts .check { flex-direction: row; align-items: center; gap: 6px; color: var(--text); font-size: 13px; padding-bottom: 7px; }
+.path-opts .check input { width: auto; }
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
+.count.err { color: var(--danger); }
+.path-summary { display: flex; gap: 12px; align-items: flex-start; }
+.path-summary pre {
+  flex: 1; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised);
+  font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; max-height: 360px; overflow: auto;
+}
+.legend { font-size: 13px; margin: 10px 0; }
+.path-image { background: #fff; border-radius: 6px; overflow: hidden; max-width: 1024px; }
+.path-image canvas { display: block; width: 100%; height: auto; }
+@media (max-width: 640px) {
+  .path-summary { flex-direction: column; }
+  .pick { margin-left: 0; }
+}

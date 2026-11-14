@@ -3,3 +3,5 @@
 /data/
 /site/data/
 /site/curves.wasm
+/site/chopt.wasm
+/wasm-chopt/target/

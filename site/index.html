@@ -21,7 +21,12 @@
   </div>
 </header>
 
-<main class="wrap">
+<nav class="wrap tabs" aria-label="Sections">
+  <a href="#" id="tab-charts" class="on">Charts</a>
+  <a href="#path" id="tab-path">Star Power paths</a>
+</nav>
+
+<main class="wrap" id="view-charts">
   <details class="about">
     <summary>What the numbers mean</summary>
     <p class="lead">Fretwork works out how hard a chart is from its notes, not from the difficulty the charter typed in.
@@ -152,15 +157,70 @@
 
 </main>
 
+<main class="wrap" id="view-path" hidden>
+  <section class="path-intro">
+    <h2>Star Power paths</h2>
+    <p class="dim">Finds the activations that score the most, using <a href="https://github.com/GenericMadScientist/CHOpt">CHOpt</a>
+      by Raymond Wright, running in your browser. Pick a chart's <b>Path</b> button on the Charts tab, or drop a chart here.</p>
+  </section>
+
+  <section class="dropzone" id="drop" tabindex="0" aria-label="Drop or choose a chart">
+    <div id="drop-empty">
+      <b>Drop a notes.chart, notes.mid or .sng here</b>
+      <span class="dim">Add the chart's song.ini too for its HOPO and sustain settings. A whole chart folder works as well.</span>
+      <label class="pick">Choose files<input id="pick" type="file" multiple accept=".chart,.mid,.midi,.sng,.ini"></label>
+    </div>
+    <div id="drop-loaded" hidden>
+      <div><b id="loaded-name"></b> <span class="dim" id="loaded-by"></span></div>
+      <span class="dim" id="loaded-src"></span>
+      <label class="pick">Load another<input id="pick2" type="file" multiple accept=".chart,.mid,.midi,.sng,.ini"></label>
+    </div>
+  </section>
+
+  <section class="controls path-opts" aria-label="CHOpt options">
+    <label>Instrument <select id="p-inst"></select></label>
+    <label>Difficulty <select id="p-diff"></select></label>
+    <label title="How much of each timing window you use to squeeze extra notes or Star Power. 100% is frame-perfect.">Squeeze %
+      <input id="p-squeeze" type="number" min="0" max="100" step="1" value="100"></label>
+    <label title="How much of each sustain's early-whammy window you get.">Early whammy %
+      <input id="p-ew" type="number" min="0" max="100" step="1" value="100"></label>
+    <label title="Milliseconds of whammy lost at the start of each sustain.">Lazy whammy ms
+      <input id="p-lazy" type="number" min="0" step="1" value="0"></label>
+    <label title="Milliseconds after an activation before whammy counts again.">Whammy delay ms
+      <input id="p-wdelay" type="number" min="0" step="1" value="0"></label>
+    <label title="Your calibration (video lag), -200 to 200 ms.">Video lag ms
+      <input id="p-lag" type="number" min="-200" max="200" step="1" value="0"></label>
+    <label title="Song speed, in steps of 5%.">Speed %
+      <input id="p-speed" type="number" min="5" max="5000" step="5" value="100"></label>
+    <label class="check"><input id="p-precision" type="checkbox"> Precision mode</label>
+    <label class="check"><input id="p-lefty" type="checkbox"> Lefty flip</label>
+    <button id="p-run" type="button" class="primary" disabled>Find path</button>
+    <button id="p-cancel" type="button" hidden>Cancel</button>
+  </section>
+  <p id="p-status" class="count" aria-live="polite"></p>
+
+  <section id="p-result" hidden>
+    <div class="path-summary">
+      <pre id="p-summary"></pre>
+      <button id="p-save" type="button">Save image</button>
+    </div>
+    <p class="dim legend">Green: Star Power phrases. Blue: activations (red where the bar runs short). Yellow: whammy you can skip.
+      Under each measure: base score, running total and Star Power bar.</p>
+    <div id="p-image" class="path-image"></div>
+  </section>
+</main>
+
 <footer>
   <div class="wrap">
     <p>Ratings use <a href="https://github.com/Staycation44/fretwork">Fretwork</a> by Staycation (MIT licence, formulas v3), ported to Rust.
       Chart listings and files come from <a href="https://www.enchor.us">Chorus Encore</a> and <a href="https://rhythmverse.co">RhythmVerse</a>;
       each song links to its page there.
-      Not affiliated with either. Charts belong to their charters.</p>
+      Not affiliated with either. Charts belong to their charters.
+      Star Power paths use <a href="https://github.com/GenericMadScientist/CHOpt">CHOpt</a> by Raymond Wright (GPL-3.0), ported to Rust for Truss.</p>
     <p class="disclaimer">RhythmVerse charts are manually scraped, Please bear with me... Graphs may follow at a later date.</p>
   </div>
 </footer>
 <script src="app.js"></script>
+<script src="path.js"></script>
 </body>
 </html>

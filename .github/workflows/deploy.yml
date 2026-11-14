@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ["site/**", "src/**", "wasm/**", ".github/workflows/deploy.yml"]
+    paths: ["site/**", "src/**", "wasm/**", "wasm-chopt/**", ".github/workflows/deploy.yml"]
 
 permissions:
   contents: read
@@ -44,6 +44,7 @@ jobs:
           workspaces: |
             . -> target
             wasm -> target
+            wasm-chopt -> target
 
       - name: Build scanner
         run: cargo build --release
@@ -53,6 +54,13 @@ jobs:
         run: |
           cargo build --release --manifest-path wasm/Cargo.toml --target wasm32-unknown-unknown
           cp wasm/target/wasm32-unknown-unknown/release/truss_index_curves.wasm site/curves.wasm
+
+      # The Star Power paths section: Truss's port of CHOpt as WebAssembly. Its tests first.
+      - name: Build CHOpt module
+        run: |
+          cargo test --release --manifest-path wasm-chopt/Cargo.toml
+          cargo build --release --manifest-path wasm-chopt/Cargo.toml --target wasm32-unknown-unknown
+          cp wasm-chopt/target/wasm32-unknown-unknown/release/truss_index_chopt.wasm site/chopt.wasm
 
       - name: Download database
         run: |
@@ -82,8 +90,8 @@ jobs:
       - name: Version the stylesheet and script
         run: |
           v="${GITHUB_SHA::8}"
-          sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|" site/index.html
-          grep -E "style.css|app.js" site/index.html
+          sed -i "s|href=\"style.css\"|href=\"style.css?v=$v\"|; s|src=\"app.js\"|src=\"app.js?v=$v\"|; s|src=\"path.js\"|src=\"path.js?v=$v\"|" site/index.html
+          grep -E "style.css|app.js|path.js" site/index.html
           # meta.json (always fetched fresh) names the build, so a page from an older build can
           # notice and reload itself.
           jq --arg v "$v" '.build = $v' site/data/meta.json > meta.tmp && mv meta.tmp site/data/meta.json
