@@ -249,11 +249,12 @@ button.primary { background: var(--accent); border-color: var(--accent); color: 
 button.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.1); }
 .count.err { color: var(--danger); }
 .path-summary { display: flex; gap: 12px; align-items: flex-start; }
+.path-summary button { flex: none; }
 .path-summary pre {
-  flex: 1; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised);
+  flex: 1; min-width: 0; margin: 0; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--raised);
   font: 13px/1.5 ui-monospace, "Cascadia Mono", Consolas, monospace; white-space: pre-wrap; max-height: 360px; overflow: auto;
 }
-.path-image { background: #fff; border-radius: 6px; overflow: hidden; max-width: 1024px; }
+.path-image { background: #fff; border-radius: 6px; overflow: hidden; max-width: 1024px; margin-top: 16px; }
 .path-image canvas { display: block; width: 100%; height: auto; }
 @media (max-width: 640px) {
   .path-summary { flex-direction: column; }

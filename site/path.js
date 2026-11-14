@@ -276,7 +276,8 @@ function paintStrip(canvas, y0, res) {
     ctx.font = `${Math.round(height * 0.86)}px system-ui, "Segoe UI", Roboto, sans-serif`;
     ctx.fillStyle = colour;
     ctx.textAlign = right ? "right" : "left";
-    ctx.fillText(text, x, y + height * 0.08);
+    // Section names can carry Clone Hero formatting tags (<i>Verse 1</i>).
+    ctx.fillText(text.replace(/<[^>]*>/g, ""), x, y + height * 0.08);
   }
 }
 
