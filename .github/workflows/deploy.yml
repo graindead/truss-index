@@ -68,15 +68,24 @@ jobs:
           gh release download data --pattern fretwork.db.gz --dir data
           gunzip -f data/fretwork.db.gz
 
-      # RhythmVerse charts: the truss-rv-index cacher's state and Truss's RhythmVerse cache (album,
-      # genre, year), uploaded to the "data" release. Optional: without them only Encore is listed.
+      # RhythmVerse charts: the truss-rv-index cacher's state, which its own workflow refreshes
+      # every hour (at :41) on its "rv-index" release; the watcher's hourly deploy picks up new
+      # charts from there. Album, genre and year come from Truss's RhythmVerse cache on this repo's
+      # "data" release. Optional: without them only Encore is listed.
       - name: Download RhythmVerse data
         run: |
-          if gh release download data --pattern 'rv-*.sqlite.gz' --dir data; then
-            gunzip -f data/rv-*.sqlite.gz
+          if gh release download rv-index --repo graindead/truss-rv-index --pattern rv-state.sqlite.zst --dir data; then
+            zstd -d -f data/rv-state.sqlite.zst -o data/rv-state.sqlite && rm data/rv-state.sqlite.zst
+          elif gh release download data --pattern rv-state.sqlite.gz --dir data; then
+            echo "Live RhythmVerse cache unavailable; using the older copy on the data release."
+            gunzip -f data/rv-state.sqlite.gz
           else
-            echo "No RhythmVerse data on the release; listing Encore charts only."
+            echo "No RhythmVerse data; listing Encore charts only."
           fi
+          if gh release download data --pattern rv-truss-cache.sqlite.gz --dir data; then
+            gunzip -f data/rv-truss-cache.sqlite.gz
+          fi
+          ls -l data
 
       - name: Export site data
         run: |

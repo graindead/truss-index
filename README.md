@@ -27,8 +27,11 @@ It has two parts:
   rhythmverse.sqlite]` merges them into the list, newest first with the Encore charts. Their ids
   are `rv:<file id>`, they carry an "RV" tag and link to their RhythmVerse page, and album, genre
   and year come from Truss's RhythmVerse cache when given. Both files are opened read-only. The
-  deploy job downloads them from the `data` release as `rv-state.sqlite.gz` and
-  `rv-truss-cache.sqlite.gz` when they're there. Difficulty graphs are Encore-only for now.
+  deploy job takes the state from truss-rv-index's `rv-index` release (`rv-state.sqlite.zst`,
+  refreshed hourly by that repo's own workflow), so the watcher's hourly deploy picks up new
+  RhythmVerse charts; it falls back to `rv-state.sqlite.gz` on this repo's `data` release. The
+  Truss cache comes from the `data` release as `rv-truss-cache.sqlite.gz`. Difficulty graphs are
+  Encore-only for now.
 
 - **`wasm-chopt/`** is the **Star Power paths** section: Truss's Rust port of
   [CHOpt](https://github.com/GenericMadScientist/CHOpt) by Raymond Wright (GPL-3.0), copied into
