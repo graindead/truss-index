@@ -56,6 +56,8 @@
     <dl class="defs">
       <div><dt>Tier 0–6</dt><dd>D sorted into seven bands per instrument, set so official charts spread across them roughly like the in-game difficulty dots. Stops at 6.</dd></div>
       <div><dt>Open-ended tier</dt><dd>Keeps counting past 6. Each tier is roughly 15–20% more D than the one before, so very hard charts can reach 10 or more.</dd></div>
+      <div><dt>Charter's difficulty</dt><dd>The difficulty the charter set for the instrument, shown next to Fretwork's tier for comparison:
+        song.ini's number on Chorus Encore charts, RhythmVerse's 1–6 on RhythmVerse charts. A dash means none was set.</dd></div>
       <div><dt>Harder than</dt><dd>The share of rated charts on this site, on the same instrument, with a lower D.</dd></div>
       <div><dt>Movement</dt><dd>Average movement per second over the whole song.</dd></div>
       <div><dt>Spread</dt><dd>How much the note rate swings over the song. Lower is steadier; higher means bursts and breaks.</dd></div>
@@ -113,6 +115,12 @@
           <option value="kicks-desc">Most kicks (drums)</option>
           <option value="kicks-asc">Fewest kicks (drums)</option>
         </optgroup>
+        <optgroup label="Charter's difficulty">
+          <option value="cdiff-desc">Charter's hardest first</option>
+          <option value="cdiff-asc">Charter's easiest first</option>
+          <option value="gap-desc">Fretwork rates harder than charter</option>
+          <option value="gap-asc">Fretwork rates easier than charter</option>
+        </optgroup>
         <optgroup label="Name">
           <option value="name-asc">Song A–Z</option>
           <option value="name-desc">Song Z–A</option>
@@ -143,6 +151,7 @@
           <th data-sort="charter">Charter</th>
           <th data-sort="len" class="num">Length</th>
           <th data-sort="d">Fretwork (Expert)</th>
+          <th data-sort="cdiff" title="The difficulty the charter set (song.ini on Encore, RhythmVerse's 1–6)">Charter's difficulty</th>
         </tr>
       </thead>
       <tbody id="rows"></tbody>

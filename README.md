@@ -13,6 +13,10 @@ It has two parts:
 - **`site/`** is a plain HTML/CSS/JS page. It loads `site/data/charts.json`, which
   `truss-index export` writes, and does all searching in the browser. No build step and no
   server, so it runs on GitHub Pages.
+- **Charter's difficulty**, shown beside each Fretwork tier, is the difficulty the charter set:
+  song.ini's `diff_*` from Encore's listing (stored in the `diffs` column; a database from before
+  that column existed fills it on its next full listing), and RhythmVerse's 1–6 from Truss's
+  RhythmVerse cache. The sort menu can put the charts where the two disagree most first.
 
 - **`wasm/`** builds the difficulty graphs. Clicking an instrument in a chart's details fetches
   that chart's header and notes from Encore in the browser, by byte range like the scanner (about

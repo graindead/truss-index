@@ -167,7 +167,9 @@ async fn scan(args: &Args) -> Result<(), String> {
 /// nothing modified since the last listing.
 async fn list_catalog(db: &mut Db, client: &reqwest::Client, args: &Args) -> Result<(), String> {
     let run_start = now();
-    let watermark = if args.full_list { None } else { db.get_meta("list_watermark") };
+    // A database from before the charter difficulties were stored needs one full listing to fill them.
+    let backfill = db.get_meta("diffs_listed").is_none();
+    let watermark = if args.full_list || backfill { None } else { db.get_meta("list_watermark") };
     let cutoff = watermark.as_deref().and_then(|w| chrono::DateTime::parse_from_rfc3339(w).ok()).map(|w| {
         (w - chrono::Duration::hours(args.overlap_hours)).to_utc().format("%Y-%m-%dT%H:%M:%S%.3fZ").to_string()
     });
@@ -225,6 +227,9 @@ async fn list_catalog(db: &mut Db, client: &reqwest::Client, args: &Args) -> Res
                 println!("{gone} charts are no longer on Encore");
             }
             db.set_meta("last_full_list", &run_start)?;
+        }
+        if cutoff.is_none() {
+            db.set_meta("diffs_listed", &run_start)?;
         }
     }
     Ok(())

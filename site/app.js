@@ -1,6 +1,7 @@
 // Truss Index: loads data/charts.json (written by `truss-index export`) and filters it
 // in the browser. Row: [md5, name, artist, album, charter, lengthSec, modified, ratings]
-// Rating: [inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null]
+// Rating: [inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null,
+//          charterDiff|null (the charter's own difficulty: song.ini on Encore, RhythmVerse's 1-6)]
 // then genre, year.
 "use strict";
 
@@ -103,6 +104,13 @@ function apply(resetPage) {
     move: (e) => maxOf(e.ok, 4),
     spread: (e) => maxOf(e.ok, 5),
     kicks: (e) => e.ok.find((r) => r[0] === 4)?.[6] ?? null,
+    // The charter's own difficulty, and how far Fretwork's 0–6 tier is from it (charted only).
+    cdiff: (e) => { const v = e.ok.filter((r) => r[8] != null); return v.length ? Math.max(...v.map((r) => r[8])) : null; },
+    gap: (e) => {
+      const v = e.ok.filter((r) => r[8] != null).map((r) => r[2] - Math.min(6, r[8]));
+      if (!v.length) return null;
+      return dir === "asc" ? Math.min(...v) : Math.max(...v);
+    },
     name: (e) => e.c.row[1] || null,
     artist: (e) => e.c.row[2] || null,
     album: (e) => known(e.c.row[3]),
@@ -127,6 +135,15 @@ function chip(r, sel, tIdx) {
   const t = r[tIdx];
   const title = `${NAMES[r[0]]}: D ${(r[1] / 100).toFixed(2)}, tier ${r[2]} (0–6), open-ended tier ${r[3]}`;
   return `<span class="chip${sel ? " sel" : ""}" title="${esc(title)}"><span class="t" style="background:${tierColor(r[2])}">${t}</span>${SHORT[r[0]]} <span>${(r[1] / 100).toFixed(1)}</span></span>`;
+}
+
+// The charter's difficulty for a rating, beside Fretwork's chip in the next column.
+function cchip(r, sel) {
+  if (r.length < 9) return ""; // not known yet (listed before charter difficulties were recorded)
+  const c = r[8];
+  const title = c == null ? `${NAMES[r[0]]}: the charter didn't set a difficulty` : `${NAMES[r[0]]}: the charter set ${c}; Fretwork says tier ${r[2]}`;
+  const badge = c == null ? `<span class="t none">–</span>` : `<span class="t" style="background:${tierColor(c)}">${c}</span>`;
+  return `<span class="chip${sel ? " sel" : ""}" title="${esc(title)}">${badge}${SHORT[r[0]]}</span>`;
 }
 
 function detail(r) {
@@ -177,7 +194,7 @@ function card(r, sel, md5) {
     : "";
   return `<section class="card${sel ? " sel" : ""}${gOpen ? " gopen" : ""}"${attrs}>
     <header><span class="t big" style="background:${tierColor(r[2])}">${r[2]}</span>
-      <div><b>${NAMES[r[0]]}</b><div class="dim">Tier ${r[2]} of 6</div></div>${meter(r[2])}
+      <div><b>${NAMES[r[0]]}</b><div class="dim">Tier ${r[2]} of 6${r.length > 8 ? " · " : ""}${r.length > 8 ? `charter's ${r[8] ?? "–"}` : ""}</div></div>${meter(r[2])}
       ${graphable ? `<span class="gtoggle">${gOpen ? "Hide graph ▴" : "Show graph ▾"}</span>` : ""}</header>
     <dl>${stats.map(([k, v, tip]) => `<div title="${esc(tip)}"><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
     ${gOpen ? `<div class="graph" data-key="${key}">${graphBody(md5, r[0])}</div>` : ""}
@@ -225,7 +242,8 @@ function render(inst, tIdx) {
         <td class="charter">${esc(charter)}</td>
         <td class="num">${fmtLen(len)}</td>
         <td><div class="chips">${shown.map((r) => chip(r, r === sel, tIdx)).join("")}</div>${sel && !isOpen ? detail(sel) : ""}</td>
-      </tr>${isOpen ? `<tr class="more"><td colspan="4">${panel(c.row, inst)}</td></tr>` : ""}`;
+        <td class="cdiff"><div class="chips">${shown.map((r) => cchip(r, r === sel)).join("")}</div></td>
+      </tr>${isOpen ? `<tr class="more"><td colspan="5">${panel(c.row, inst)}</td></tr>` : ""}`;
     })
     .join("");
   const pages = Math.max(1, Math.ceil(view.length / PER_PAGE));

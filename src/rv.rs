@@ -21,6 +21,8 @@ struct Extra {
     genre: String,
     year: String,
     length_ms: i64,
+    /// RhythmVerse's difficulties (1-6), in export::INSTRUMENTS order.
+    diffs: [Option<i64>; 6],
 }
 
 /// (sort timestamp, site row) for every RhythmVerse chart with at least one rating.
@@ -29,13 +31,20 @@ pub fn rows(state: &Path, truss_cache: Option<&Path>) -> Result<Vec<(String, Val
     let mut extra: HashMap<String, Extra> = HashMap::new();
     if let Some(p) = truss_cache {
         let c = open_ro(p)?;
-        let mut st = c.prepare("SELECT uid, album, genre, year, length_ms FROM charts").map_err(e)?;
+        let mut st = c.prepare("SELECT uid, album, genre, year, length_ms, d_guitar, d_guitar_coop, d_rhythm, d_bass, d_drums, d_keys FROM charts").map_err(e)?;
         let mut rs = st.query([]).map_err(e)?;
         while let Some(r) = rs.next().map_err(e)? {
             let s = |i: usize| r.get::<_, Option<String>>(i).ok().flatten().unwrap_or_default();
+            let d = |i: usize| r.get::<_, Option<i64>>(i).ok().flatten().filter(|&d| d > 0);
             extra.insert(
                 s(0),
-                Extra { album: s(1), genre: s(2), year: s(3), length_ms: r.get::<_, Option<i64>>(4).ok().flatten().unwrap_or(0) },
+                Extra {
+                    album: s(1),
+                    genre: s(2),
+                    year: s(3),
+                    length_ms: r.get::<_, Option<i64>>(4).ok().flatten().unwrap_or(0),
+                    diffs: [d(5), d(6), d(7), d(8), d(9), d(10)],
+                },
             );
         }
     }
@@ -55,6 +64,7 @@ pub fn rows(state: &Path, truss_cache: Option<&Path>) -> Result<Vec<(String, Val
         let id = s(0);
         let Ok(data) = serde_json::from_str::<Value>(&s(6)) else { continue };
         let Some(w) = data.get("w").and_then(|w| w.as_object()) else { continue };
+        let ex = extra.remove(&id).unwrap_or_default();
         let mut ratings: Vec<Value> = Vec::new();
         for (inst, v) in w {
             let Some(i) = crate::export::INSTRUMENTS.iter().position(|x| x == inst) else { continue };
@@ -69,13 +79,13 @@ pub fn rows(state: &Path, truss_cache: Option<&Path>) -> Result<Vec<(String, Val
                 crate::export::x100(f("sp").unwrap_or(0.0)),
                 f("k").map(crate::export::x100),
                 f("t2").map(|t| t as i64),
+                ex.diffs[i],
             ]));
         }
         if ratings.is_empty() {
             continue;
         }
         ratings.sort_by_key(|r| r[0].as_u64());
-        let ex = extra.remove(&id).unwrap_or_default();
         let len_ms = r.get::<_, Option<i64>>(7).ok().flatten().filter(|&m| m > 0).unwrap_or(ex.length_ms);
         // "YYYY-MM-DD HH:MM:SS" -> ISO, so it sorts alongside Encore's modifiedTime.
         let modified = s(1).replacen(' ', "T", 1);

@@ -3,7 +3,8 @@
 //! the database snapshot the site was last built from).
 //!
 //! charts.json: { "instruments": [...], "rows": [[md5, name, artist, album, charter, lengthSec,
-//!   modifiedDate, [[inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null], ...],
+//!   modifiedDate, [[inst, d*100, remap, tier, movement*100, spread*100, kicks*100|null, tier2x|null,
+//!   charterDiff|null (the charter's own difficulty: song.ini on Encore, RhythmVerse's 1-6)], ...],
 //!   genre, year, hasVideo (0/1: the notes come from Encore's {md5}_novideo.sng)], ...] }
 //! `inst` indexes "instruments". Numbers are scaled to integers to keep the file small.
 //! recent.json: { "checked": time, "since": time, "rows": [same rows] }
@@ -61,15 +62,23 @@ fn rows(db: &Db, filter: &str, params: &[SqlValue]) -> Result<Vec<(String, Value
     let mut st = db
         .conn
         .prepare(&format!(
-            "SELECT c.md5, c.name, c.artist, c.album, c.charter, c.song_length, c.modified_time, c.genre, c.year, c.has_video
+            "SELECT c.md5, c.name, c.artist, c.album, c.charter, c.song_length, c.modified_time, c.genre, c.year, c.has_video, c.diffs
              FROM charts c WHERE {filter} ORDER BY c.modified_time DESC"
         ))
         .map_err(e)?;
     let mut rs = st.query(p).map_err(e)?;
     while let Some(r) = rs.next().map_err(e)? {
         let md5: String = r.get(0).map_err(e)?;
-        let Some(ratings) = by_md5.remove(&md5) else { continue };
+        let Some(mut ratings) = by_md5.remove(&md5) else { continue };
         let s = |i: usize| r.get::<_, Option<String>>(i).ok().flatten().unwrap_or_default();
+        // Left off until a listing has recorded the charter's difficulties (NULL), so the site can
+        // tell "not known yet" from "the charter set none" (null).
+        let diffs: Option<Vec<Option<i64>>> = serde_json::from_str(&s(10)).ok();
+        for r in ratings.iter_mut().filter(|_| diffs.is_some()) {
+            let diffs = diffs.as_ref().unwrap();
+            let d = r[0].as_u64().and_then(|i| diffs.get(i as usize).copied().flatten());
+            r.as_array_mut().unwrap().push(json!(d));
+        }
         let len: Option<i64> = r.get(5).map_err(e)?;
         let modified = s(6);
         out.push((modified.clone(), json!([

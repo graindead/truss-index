@@ -105,6 +105,7 @@ tr:last-child td { border-bottom: 0; }
   color: var(--chip-text); font-weight: 700; font-variant-numeric: tabular-nums;
 }
 .chip.sel { border-color: var(--accent); background: var(--tint); }
+.chip .t.none { background: var(--line); color: var(--muted); }
 .detail { color: var(--muted); font-size: 12px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 .dim { color: var(--muted); }

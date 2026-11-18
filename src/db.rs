@@ -64,6 +64,15 @@ impl Db {
              CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);",
         )
         .map_err(|e| e.to_string())?;
+        // Added later: the charter's song.ini difficulties, JSON in export::INSTRUMENTS order.
+        // Filled by the next full listing (see list_catalog).
+        let has_diffs = conn
+            .prepare("SELECT 1 FROM pragma_table_info('charts') WHERE name = 'diffs'")
+            .and_then(|mut st| st.exists([]))
+            .map_err(|e| e.to_string())?;
+        if !has_diffs {
+            conn.execute_batch("ALTER TABLE charts ADD COLUMN diffs TEXT").map_err(|e| e.to_string())?;
+        }
         Ok(Self { conn })
     }
 
@@ -89,14 +98,15 @@ impl Db {
             let mut st = tx
                 .prepare_cached(
                     "INSERT INTO charts (md5, chart_id, name, artist, album, genre, year, charter, song_length,
-                         modified_time, has_video, instruments, first_seen, last_seen, removed)
-                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, 0)
+                         modified_time, has_video, instruments, first_seen, last_seen, removed, diffs)
+                     VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?13, 0, ?14)
                      ON CONFLICT(md5) DO UPDATE SET
                          chart_id = excluded.chart_id, name = excluded.name, artist = excluded.artist,
                          album = excluded.album, genre = excluded.genre, year = excluded.year,
                          charter = excluded.charter, song_length = excluded.song_length,
                          modified_time = excluded.modified_time, has_video = excluded.has_video,
-                         instruments = excluded.instruments, last_seen = excluded.last_seen, removed = 0",
+                         instruments = excluded.instruments, last_seen = excluded.last_seen, removed = 0,
+                         diffs = excluded.diffs",
                 )
                 .map_err(|e| e.to_string())?;
             for c in charts {
@@ -117,7 +127,8 @@ impl Db {
                     c.modified_time,
                     c.has_video_background,
                     instruments,
-                    now
+                    now,
+                    c.diffs_json()
                 ])
                 .map_err(|e| e.to_string())?;
             }

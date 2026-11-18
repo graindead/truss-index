@@ -34,9 +34,31 @@ pub struct Chart {
     pub has_video_background: bool,
     #[serde(rename = "notesData")]
     pub notes_data: Option<NotesData>,
+    // The charter's own difficulties from song.ini (-1 or missing: not set).
+    pub diff_guitar: Option<i64>,
+    pub diff_guitar_coop: Option<i64>,
+    pub diff_rhythm: Option<i64>,
+    pub diff_bass: Option<i64>,
+    pub diff_drums: Option<i64>,
+    pub diff_drums_real: Option<i64>,
+    pub diff_keys: Option<i64>,
 }
 
 impl Chart {
+    /// The charter's difficulties in `export::INSTRUMENTS` order, as JSON (null where unset).
+    pub fn diffs_json(&self) -> String {
+        let set = |d: Option<i64>| d.filter(|&d| d >= 0);
+        let v = [
+            set(self.diff_guitar),
+            set(self.diff_guitar_coop),
+            set(self.diff_rhythm),
+            set(self.diff_bass),
+            set(self.diff_drums).or(set(self.diff_drums_real)),
+            set(self.diff_keys),
+        ];
+        serde_json::to_string(&v).unwrap_or_default()
+    }
+
     /// Where the chart's .sng lives. Charts with a video background have a smaller copy without
     /// it, which has the same notes.
     pub fn sng_url(md5: &str, has_video: bool) -> String {
