@@ -106,6 +106,8 @@ tr:last-child td { border-bottom: 0; }
 }
 .chip.sel { border-color: var(--accent); background: var(--tint); }
 .chip .t.none { background: var(--line); color: var(--muted); }
+/* A faint line between Fretwork's tiers and the charter's difficulty. */
+th.cdiff, td.cdiff { border-left: 1px solid var(--line); padding-left: 14px; }
 .detail { color: var(--muted); font-size: 12px; margin-top: 4px; font-variant-numeric: tabular-nums; }
 
 .dim { color: var(--muted); }
