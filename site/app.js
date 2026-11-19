@@ -43,7 +43,8 @@ function readState() {
   els.q.value = p.get("q") || "";
   els.inst.value = p.get("i") || "";
   els.src.value = ["e", "r"].includes(p.get("src")) ? p.get("src") : "";
-  els.scale.value = p.get("s") === "tier" ? "tier" : "remap";
+  // Open-ended tier by default; "s=remap" picks the 0–6 tier. (Old links saying "s=tier" still work.)
+  els.scale.value = p.get("s") === "remap" ? "remap" : "tier";
   els.tmin.value = p.get("min") || "";
   els.tmax.value = p.get("max") || "";
   els.sort.value = p.get("o") || DEFAULT_SORT;
@@ -55,7 +56,7 @@ function writeState() {
   if (els.q.value) p.set("q", els.q.value);
   if (els.inst.value) p.set("i", els.inst.value);
   if (els.src.value) p.set("src", els.src.value);
-  if (els.scale.value !== "remap") p.set("s", els.scale.value);
+  if (els.scale.value !== "tier") p.set("s", els.scale.value);
   if (els.tmin.value) p.set("min", els.tmin.value);
   if (els.tmax.value) p.set("max", els.tmax.value);
   if (els.sort.value !== DEFAULT_SORT) p.set("o", els.sort.value);
